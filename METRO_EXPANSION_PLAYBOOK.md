@@ -278,7 +278,9 @@ Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 3. ⬜ **`borough-officials.json`** (Thread 4) — supply 10 names (5 Borough Presidents + 5 District Attorneys) from the official sites, verified by hand, per the honesty rule.
 4. ✅ **Static-file conversions** (Thread 1) — the three anchors are built, validated (≥99.95% / 0 overlaps), and the municipal-court count (28) + City-Hall/Brooklyn ground truth are pinned in `smoke_test.mjs`/`validate_index.py`.
 5. ⬜ One live fetch of the Green Book (`a856-gbol.nyc.gov`) to assess upgrading `borough-officials` to a scraper (Thread 4).
-6. ⬜ Optional API keys, both documented upgrades over the HTML scrapes, **neither required at launch**: a **Legistar API key** (City Council roster — the HTML `People.aspx` scrape works without it) and an **NY Senate Open Legislation API key** (`legislation.nysenate.gov`, 401 without a key — the nysenate.gov HTML scrape works without it). See §6c/§6 rows.
+6. Optional API keys, both documented upgrades over the HTML scrapes, **neither required at launch**:
+   - 🟡 **NY Senate Open Legislation API key** — **obtained by operator (2026-07-10).** It is a **secret** (key-gated, 401 without it): store it as the repo secret **`NYSENATE_API_KEY`** and read it server-side in the Thread 5 NY Senate scraper — **never** place it in `index.html` (public site). Until Thread 5 wires it, nothing consumes it; the nysenate.gov HTML scrape remains the no-key fallback.
+   - ⬜ **Legistar API key** (City Council roster — the HTML `People.aspx` scrape works without it). Request from Granicus/Legistar.
 
 ### API-key summary (what actually needs a key)
 
@@ -289,7 +291,7 @@ Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 | **U.S. Census TIGERweb / DCP·NYSED ArcGIS** | **No** | legislative + battalion + school-point geometry | — |
 | **congress-legislators** | **No** (public CC0 file) | U.S. House roster | — |
 | **Legistar API** | Optional | City Council roster (HTML scrape works without) | Granicus/Legistar support request |
-| **NY Senate Open Legislation API** | Optional | State Senate roster (HTML scrape works without) | legislation.nysenate.gov → sign up for an API key |
+| **NY Senate Open Legislation API** | Optional — **key obtained ✓** | State Senate roster (HTML scrape works without) | store as repo secret `NYSENATE_API_KEY`; used in Thread 5 |
 | GeoClient / Geoservice (NYC) | N/A — **skip** | (server-side only, key-gated; GeoSearch replaces it) | — |
 
 ## 12. Per-thread handoff protocol
