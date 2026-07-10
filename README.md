@@ -4,7 +4,7 @@
 
 A single-file, dependency-light web app: one `index.html`, Leaflet for the map, no build step, no framework, no server-side code. Deployed as a static site — any static host or server works.
 
-> **Status: porting in progress — all 24 layers live, with officeholders.** This is the New York City fork of [District Explorer](https://github.com/ThursdaysFamous/DistrictExplorer-CHI) (Chicago is the reference implementation), built thread by thread following [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md). **Threads 0–5 are complete** — the full **24-layer** civic profile is wired (**Geography**: Borough/County, NTA, ZIP; **Political**: City Council, Election District, Community District/Board, U.S. House, NY Senate & Assembly, Judicial & Civil Court, Borough President, District Attorney; **Public Safety**: NYPD Precinct + Sector, Police Station & Firehouse, FDNY Battalion; **Schools**: ES/MS/HS zones with honest choice-based empty states, Community School District, CEC, School sites) — and the **roster pipeline** now names the officeholders: NY Senate & Assembly (via the Open Legislation API), City Council, NYPD precinct commanders, U.S. House, and live Community-Board chairs, each refreshed by a weekly workflow that opens a PR for human review. Still to come: a final **audit/deploy** pass (Thread 6). Community Education Council members and Borough President / District Attorney names are the only rosters still pending (a Playwright scrape and operator-verified input, respectively).
+> **Status: all 24 layers live with officeholders; roster pipeline proven end-to-end.** This is the New York City fork of [District Explorer](https://github.com/ThursdaysFamous/DistrictExplorer-CHI) (Chicago is the reference implementation), built thread by thread following [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md). **Threads 0–5 are complete** — the full **24-layer** civic profile is wired (**Geography**: Borough/County, NTA, ZIP; **Political**: City Council, Election District, Community District/Board, U.S. House, NY Senate & Assembly, Judicial & Civil Court, Borough President, District Attorney; **Public Safety**: NYPD Precinct + Sector, Police Station & Firehouse, FDNY Battalion; **Schools**: ES/MS/HS zones with honest choice-based empty states, Community School District, CEC, School sites). The **roster pipeline** names the officeholders — NY Senate & Assembly (Open Legislation API), City Council, NYPD precinct commanders, U.S. House, live Community-Board chairs — and has completed its first live cycle: each weekly workflow re-scrapes its roster and opens a PR for human review (the first, [PR #6](https://github.com/ThursdaysFamous/DistrictExplorer-NYC/pull/6), refreshed the state legislature and populated every member's district-office address via Open States). Political cards now carry office addresses with card + map pins wherever a verified source exists. Still to come: a final **audit/deploy** pass (Thread 6). Community Education Council members and Borough President / District Attorney names are the only rosters still pending (a Playwright scrape and operator-verified input, respectively).
 
 ## Running it
 
@@ -16,7 +16,7 @@ python3 -m http.server 8000
 # then open http://localhost:8000/
 ```
 
-## What it will answer (planned NYC layers)
+## What it answers (24 NYC layers)
 
 Pick a point. The app runs a point-in-district lookup across every layer you have toggled on and builds a "civic profile" for that location. The NYC roster is **24 layers** (`METRO_EXPANSION_PLAYBOOK.md` §7):
 
@@ -33,7 +33,7 @@ Chicago layers with no honest NYC analog (county legislature, elected school boa
 
 ### Shareable links
 
-The URL hash mirrors your current view (`#point=40.71274,-74.00602&layers=stub`). Copy it from the URL bar — or use the **Copy link** button on the selected-point chip — and anyone opening the link sees the same point with the same layers on.
+The URL hash mirrors your current view (`#point=40.71274,-74.00602&layers=borough,council`). Copy it from the URL bar — or use the **Copy link** button on the selected-point chip — and anyone opening the link sees the same point with the same layers on.
 
 ## Architecture
 
@@ -52,24 +52,25 @@ Stable core + pluggable layer modules, all inside `index.html`. The engine contr
 | NYSED ArcGIS (`services6.arcgis.com/EbVsqZ18sv1kVJ3k`) | School points (public / charter / private) |
 | [U.S. Census TIGERweb](https://tigerweb.geo.census.gov) | U.S. House, NY Senate, NY Assembly boundaries; judicial/municipal county geometry |
 | [unitedstates/congress-legislators](https://github.com/unitedstates/congress-legislators) | U.S. House roster (NY reps) |
-| nysenate.gov · nyassembly.gov · Legistar · schools.nyc.gov (scraped by CI) | State legislature, City Council, and CEC rosters |
+| NY Open Legislation API · [Open States](https://openstates.org) (district offices) | NY Senate & Assembly roster + office addresses (weekly CI) |
+| council.nyc.gov · nyc.gov precinct pages · schools.nyc.gov (CI scrapers) | City Council roster + district offices, NYPD precinct commanders, CEC members |
 | [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc) (Pelias, keyless, PAD-backed) | Address search + address pins |
 
 ## Repository layout
 
 ```
 index.html                   the entire app (styles, engine, layer modules)
-METRO_EXPANSION_PLAYBOOK.md   the NYC port plan (Part I recipe · Part II NYC worked example)
+METRO_EXPANSION_PLAYBOOK.md   the metro-porting recipe (Part I) + NYC worked example & build log (Part II)
 scripts/smoke_test.mjs        Playwright boot/behaviour smoke test (runs on every PR)
-scripts/validate_index.py     post-regeneration static gate (Chicago template — re-derived in Thread 6)
-scripts/build_embedded_boundaries.py  simplifies source GeoJSON into data/app/*.json (reused for NYC anchors)
-scripts/*.py                  Chicago scraper/builder templates (rewritten for NYC in Thread 5, §9)
-.github/workflows/            per-PR smoke test + deploy; Chicago roster crons are templates for Thread 5
+scripts/validate_index.py     static gate: layer ids, offline-anchor feature counts, roster floors
+scripts/build_embedded_boundaries.py  simplifies source GeoJSON into data/app/*.json (the 3 offline anchors)
+scripts/*.py                  NYC scraper/builder pairs (state legislature, council, NYPD, CEC, congress)
+.github/workflows/            per-PR smoke test · deploy · five weekly roster crons (each opens a PR for review)
 docs/BUILD_PLAYBOOK_1.md      engine architecture contract + Chicago build/status log
 docs/OPTIMIZATION_PLAYBOOK.md optimization & refinement playbook
 ```
 
-> **Operator setup still pending** (playbook §11): register a free Socrata app token (set `SOCRATA_APP_TOKEN` in `index.html` + the CI secret), point the custom domain (`CNAME`) and confirm it is owned, replace the placeholder `icons/`, and supply the initial `borough-officials.json`.
+> **Operator setup still pending** (playbook §11): confirm the `SOCRATA_APP_TOKEN` repo secret for CI (the app-side token is already wired in `index.html`), replace the placeholder PWA icons in `icons/app/`, and supply the initial `borough-officials.json` (5 Borough Presidents + 5 District Attorneys, hand-verified — officeholders are never guessed).
 
 ## Not for legal or official use
 
