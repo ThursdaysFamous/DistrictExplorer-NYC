@@ -6,9 +6,10 @@ the published site by `.github/workflows/deploy-pages.yml` (it ships the whole
 
 ```
 icons/
-  app/                 PWA / manifest icons
+  app/                 PWA / manifest icons + the water marker
     icon-192.png         referenced by manifest.webmanifest + sw.js shell cache
     icon-512.png
+    ferry.png            NYC Ferry logo — marker for clicks on water (see below)
   boroughs/            official borough seals — the selection-pin marker
     manhattan/
       seal.svg           vector master
@@ -41,3 +42,12 @@ teardrop marker is swapped for that borough's official seal. The wiring lives in
 
 To use a different seal size for the marker, change the `seal-96.png` reference
 in `boroughSealIcon`.
+
+## Water marker (NYC Ferry logo)
+
+A point that matches no borough is on the water, and gets the NYC Ferry logo
+instead of a seal. `loadWaterFerryIcon()` in `index.html` preloads
+`app/ferry.png` and only swaps it in once it actually loads — if the file is
+absent the marker cleanly stays the default teardrop rather than showing a
+broken image. Drop the logo in at `icons/app/ferry.png` (square, transparent or
+matching background) to enable it.
