@@ -14,19 +14,51 @@ Usage:
 """
 
 import json
+import re
 import os
 import sys
 import urllib.request
 
 SRC = "https://unitedstates.github.io/congress-legislators/legislators-current.json"
+OFFICES = "https://unitedstates.github.io/congress-legislators/legislators-district-offices.json"
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(REPO, "data", "app", "congress-roster.json")
 STATE = "NY"
 MIN_REPS = 24  # NY has 26 U.S. House seats; tolerate a couple of vacancies
 
 
+def district_offices_by_bioguide():
+    """bioguide -> [address-line, "City, NY zip"] for the member's first NY office."""
+    try:
+        data = json.load(urllib.request.urlopen(OFFICES, timeout=90))
+    except Exception:  # noqa: BLE001 — offices are an enhancement, never fatal
+        return {}
+    out = {}
+    for p in data:
+        bio = (p.get("id") or {}).get("bioguide")
+        if not bio:
+            continue
+        for o in p.get("offices", []):
+            if o.get("state") != STATE or not o.get("address"):
+                continue
+            suite = str(o.get("suite") or "").strip()
+            # the suite field usually already reads "Suite 291" / "Rm 3"; only add
+            # a designator when it's a bare number/letter.
+            if suite and not re.match(r"(?i)(suite|ste|rm|room|fl|floor|#|unit|apt)", suite):
+                suite = "Suite " + suite
+            line1 = o["address"] + ((" " + suite) if suite else "")
+            line2 = ("%s, %s %s" % (o.get("city", ""), o.get("state", ""), o.get("zip", ""))).strip()
+            lines = [line1] + ([line2] if line2.strip(", ") else [])
+            if o.get("phone"):
+                lines.append("Phone: " + o["phone"])
+            out[bio] = lines
+            break
+    return out
+
+
 def main():
     data = json.load(urllib.request.urlopen(SRC, timeout=90))
+    offices = district_offices_by_bioguide()
     roster = {}
     for p in data:
         terms = p.get("terms") or []
@@ -36,11 +68,15 @@ def main():
         if term.get("type") != "rep" or term.get("state") != STATE:
             continue
         name = p["name"].get("official_full") or (p["name"].get("first", "") + " " + p["name"].get("last", "")).strip()
-        roster[str(term.get("district"))] = {
+        entry = {
             "name": name,
             "party": term.get("party"),
             "url": term.get("url") or "https://www.house.gov/representatives",
         }
+        office = offices.get((p.get("id") or {}).get("bioguide"))
+        if office:
+            entry["districtOffice"] = office
+        roster[str(term.get("district"))] = entry
 
     if len(roster) < MIN_REPS:
         print("REFUSING to write congress-roster.json: %d reps < floor %d" % (len(roster), MIN_REPS), file=sys.stderr)

@@ -3451,10 +3451,15 @@
       if (result.member) {
         fields.push({ label: "Council Member", value: String(result.member.name) });
         if (result.member.party) fields.push({ label: "Party", value: String(result.member.party) });
+        if (result.member.office) fields.push({ label: "District Office", value: String(result.member.office), pin: "#7048E8" });
       }
       var url = result.district != null ? ("https://council.nyc.gov/district-" + result.district + "/") : "https://council.nyc.gov/districts/";
       fields.push({ label: result.member ? "Council page" : "Council directory", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYC Council' + (result.district != null ? " District " + result.district : "") + '</a>' });
       return renderFieldList(fields);
+    },
+    pointOfInterest: function (result) {
+      if (!result.member || !result.member.office) return null;
+      return { label: (result.member.name || "Council Member") + " — District Office", address: String(result.member.office) };
     }
   });
 
@@ -3471,6 +3476,14 @@
     var s = String(parseInt(v, 10));
     if (s.length < 2) return null;
     return { boro: BORO_NAME_BY_DIGIT[parseInt(s.charAt(0), 10)] || null, cd: parseInt(s.slice(1), 10) };
+  }
+  // Combine the CB office address lines (cb_office_address is usually a full
+  // "building, street, city, NY zip"; cb_address_line_2 adds a room/suite).
+  function cbOfficeAddress(info) {
+    var a = (info.cb_office_address || "").trim();
+    if (!a) return null;
+    var l2 = (info.cb_address_line_2 || "").trim();
+    return l2 ? a + ", " + l2 : a;
   }
   function communityBoardIndex(rows) {
     if (rows && rows.__cbIdx) return rows.__cbIdx;
@@ -3503,6 +3516,8 @@
         if (i.cb_chair) fields.push({ label: "Board Chair", value: String(i.cb_chair) });
         if (i.cb_district_manager) fields.push({ label: "District Manager", value: String(i.cb_district_manager) });
         if (i.neighborhoods) fields.push({ label: "Neighborhoods", value: String(i.neighborhoods) });
+        var addr = cbOfficeAddress(i);
+        if (addr) fields.push({ label: "Board Office", value: addr, pin: "#F72585" });
         if (i.cb_office_phone) fields.push({ label: "Office Phone", value: String(i.cb_office_phone) });
         if (i.cb_office_email) fields.push({ label: "Email", html: '<a href="mailto:' + sanitize(i.cb_office_email) + '">' + sanitize(i.cb_office_email) + '</a>' });
         var web = i.cb_website && i.cb_website.url ? safeHttpUrl(i.cb_website.url) : null;
@@ -3510,6 +3525,11 @@
       }
       fields.push({ label: "Note", value: "Board members are appointed by the Borough President and Council members (the board itself is not elected)." });
       return renderFieldList(fields);
+    },
+    pointOfInterest: function (result) {
+      var addr = result.info ? cbOfficeAddress(result.info) : null;
+      if (!addr) return null;
+      return { label: (result.boro ? result.boro + " " : "") + "CB " + result.cd + " Office", address: addr };
     }
   });
 

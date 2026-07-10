@@ -34,7 +34,11 @@ def main():
     for district, rec in raw.items():
         name = (rec.get("name") or "").strip()
         if name:
-            roster[str(int(district))] = {"name": name}
+            entry = {"name": name}
+            office = (rec.get("office") or "").strip()
+            if office:
+                entry["office"] = office
+            roster[str(int(district))] = entry
 
     if len(roster) < MIN_MEMBERS:
         print("REFUSING to write council-members.json: %d members < floor %d" % (len(roster), MIN_MEMBERS), file=sys.stderr)

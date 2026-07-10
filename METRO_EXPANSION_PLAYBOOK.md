@@ -402,3 +402,14 @@ Workflows (staggered, open-PR-never-commit): `update-ny-legislature-roster.yml` 
 **Operator, for CI (§11):** add two repo secrets — `SOCRATA_APP_TOKEN` (NYPD scrape) and `NYSENATE_API_KEY` (NY legislature scrape). Without them those two weekly workflows fail at the scrape step; the rest run without secrets.
 
 _Next: Thread 6 — assembly & audit (final `LAYER_AREA_RANK` visual pass, the `sw.js` exactly-one-list invariant check in `validate_index.py`, a11y/attribution, deploy). Optional: confirm the CEC council-page URL map so `cec_scraper.py` resolves; operator fills `borough_officials_source.json`._
+
+### Fix — Political office addresses + map pins (2026-07-10, branch `claude/nyc-political-addresses`)
+
+The political cards showed name + district but (unlike the safety/school cards) no office address, inline card-pin icon, or map pin. Added them where an office source exists:
+
+- `community-district` — the live `ruf7-3wgc` data already carries `cb_office_address` (+ `cb_address_line_2`); surfaced it as a "Board Office" field with the inline pin + a `pointOfInterest` map pin (Manhattan CB 1 → 1 Centre Street, Room 2202-N).
+- `congress` — `build_congress_roster.py` now joins `legislators-district-offices.json` (address + lat/lng) and adds `districtOffice` to each rep; `registerIlgaChamber` renders it with pin + POI automatically (NY-10 → 290 Broadway Suite 291). 26/26.
+- `council` — `council_scraper.py` now fetches each `council.nyc.gov/district-N` page and extracts the "District Office" address; the module renders it with pin + POI. 51/51.
+- **Deferred (wiring ready):** State Senate/Assembly office addresses — no scrapeable source (Open Legislation API has no offices; nysenate.gov is WAF-403; nyassembly.gov member pages render the address via JS, empty in static HTML). `registerIlgaChamber` already renders `districtOffice`+pin+POI, so these light up for free once a source is found. Borough President / District Attorney offices come with the operator's `borough-officials.json`; Judicial / Civil Court / Election District have no single office by design.
+
+Verified headless: address + inline pin icon + map POI pin render for all three; smoke + `validate_index.py` pass.
