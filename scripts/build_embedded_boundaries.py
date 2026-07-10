@@ -48,13 +48,38 @@ MAPSHAPER = "mapshaper@0.6.102"  # pinned for reproducible output
 #   precision: coordinate rounding on export (0.000001 = 6 decimals ~= 0.11 m)
 #   key_prop:  the property findFeatureContaining/findPropCI keys on, used only
 #              to validate point-in-district agreement below
+# NYC offline anchors (METRO_EXPANSION_PLAYBOOK §8). Sources are prepared under
+# data/*.geojson with their final property schema (crosswalks already applied),
+# since validate() requires the simplification to leave properties + feature
+# count unchanged.
 LAYERS = {
-    "school-board": {
-        "source": "data/school-board-districts.geojson",
-        "out": "school-board-districts.json",
+    # 5 boroughs (= counties), shoreline-clipped, from Socrata gthc-hcne; the
+    # shared static loader for borough / borough-president / district-attorney.
+    "borough": {
+        "source": "data/borough-boundaries.geojson",
+        "out": "borough-boundaries.json",
+        "simplify": "15%",
+        "precision": "0.000001",
+        "key_prop": "borocode",
+    },
+    # 5 NY Supreme Court judicial districts = the 5 counties relabeled
+    # (1/2/11/12/13), from TIGERweb State_County. No live source exists.
+    "judicial-districts": {
+        "source": "data/judicial-districts.geojson",
+        "out": "judicial-districts.json",
         "simplify": "15%",
         "precision": "0.000001",
         "key_prop": "district",
+    },
+    # 28 Civil (Municipal) Court districts, from Socrata 7vpq-4bh4. Map-type:
+    # /resource/ serves null geometry; the v3 view route serves it (the geospatial
+    # export route returns empty — playbook §6 note corrected).
+    "municipal-court-districts": {
+        "source": "data/municipal-court-districts.geojson",
+        "out": "municipal-court-districts.json",
+        "simplify": "15%",
+        "precision": "0.000001",
+        "key_prop": "label",
     },
 }
 

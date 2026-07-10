@@ -4,7 +4,7 @@
 
 A single-file, dependency-light web app: one `index.html`, Leaflet for the map, no build step, no framework, no server-side code. Deployed as a static site — any static host or server works.
 
-> **Status: porting in progress.** This is the New York City fork of [District Explorer](https://github.com/ThursdaysFamous/DistrictExplorer-CHI) (Chicago is the reference implementation). It is being built thread by thread following [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md). **Thread 0 (fork & re-core) is complete:** the metro-agnostic engine boots on an NYC map with the NYC bounds, palette, branding, and the keyless [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc) geocoder, plus a single placeholder layer. The real NYC layers land in Threads 1–6.
+> **Status: porting in progress.** This is the New York City fork of [District Explorer](https://github.com/ThursdaysFamous/DistrictExplorer-CHI) (Chicago is the reference implementation). It is being built thread by thread following [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md). **Threads 0–1 are complete:** the metro-agnostic engine boots on an NYC map (NYC bounds, palette, branding, keyless [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc) geocoder) and the first **5 layers** are live — Borough / County, NY Supreme Court Judicial District and Civil Court District (three offline static anchors), plus Neighborhood (NTA) and ZIP (MODZCTA) from NYC Open Data. The remaining layers land in Threads 2–6.
 
 ## Running it
 

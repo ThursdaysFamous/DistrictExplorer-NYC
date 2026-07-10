@@ -2,14 +2,15 @@
 // (.github/workflows/smoke-test.yml). Serves the real index.html and drives it
 // in Chromium via Playwright.
 //
-// THREAD 0 scope (METRO_EXPANSION_PLAYBOOK §10): the NYC fork has been re-cored
-// down to the metro-agnostic engine plus a single placeholder "stub" layer, so
-// this test asserts only what exists today — the app boots on an NYC map, the
-// one stub layer registers, a selected point renders its card, and a base-map
-// tile failure surfaces an honest banner. The offline-anchor ground-truth
-// checks (classify a known point, per-layer failure isolation) return in
-// Thread 1 once the borough / judicial-district / municipal-court static
-// anchors land; EXPECT_LAYERS climbs to 24 by Thread 6.
+// THREAD 1 scope (METRO_EXPANSION_PLAYBOOK §8/§10): five layers are registered —
+// Neighborhood, ZIP, Borough, Judicial District, Municipal Court. The three
+// offline anchors (borough / judicial-district / municipal-court) ship as
+// same-origin data/app/*.json, so this test classifies a known point against
+// them without depending on any third-party API being up in CI. It also
+// exercises the NYC water-click honesty rule (a mid-river click resolves to no
+// borough) and per-layer failure isolation. EXPECT_LAYERS climbs to 24 by
+// Thread 6; the neighborhood/ZIP layers are live-Socrata and are deliberately
+// NOT asserted as ground truth (flaky/throttled in CI).
 //
 // Run locally against a static server:
 //     python3 -m http.server 8000 &
@@ -37,7 +38,10 @@ if (VENDORED_LEAFLET) console.log("  (serving Leaflet from scripts/vendor/leafle
 
 const BASE = process.env.BASE_URL || "http://localhost:8000/";
 const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
-const EXPECT_LAYERS = 1; // Thread 0: only the placeholder stub is registered
+const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn)
+const WATER = "40.7223,-73.9697"; // mid-East-River — legitimately no borough
+const OFFLINE = ["borough", "judicial-district", "municipal-court"];
+const EXPECT_LAYERS = 5; // Thread 1: neighborhood, zip-code, borough, judicial-district, municipal-court
 const BOOT_TIMEOUT = 45000; // Leaflet CDN + first paint on a cold CI runner
 const QUERY_TIMEOUT = 25000;
 
@@ -47,9 +51,6 @@ function check(name, ok, detail) {
   if (!ok) failures.push(name);
 }
 
-// Each check runs in its own context with service workers BLOCKED — the SW is a
-// delivery optimization, not what this behaviour test targets, and its cache-
-// first serving can defeat the route interception below.
 async function booted(context, url, routeFn) {
   const page = await context.newPage();
   if (VENDORED_LEAFLET) {
@@ -64,9 +65,34 @@ async function booted(context, url, routeFn) {
   return page;
 }
 
+// Wait for a layer card to finish loading, then return its normalized text.
+async function cardText(page, id) {
+  await page
+    .waitForFunction(
+      (cid) => {
+        const el = document.getElementById("card-" + cid);
+        return el && !el.querySelector(".loading-row") &&
+          (el.querySelector(".result-fields") || el.querySelector(".state-empty") ||
+           el.classList.contains("state-empty") || el.classList.contains("state-error") || el.querySelector(".state-error"));
+      },
+      id,
+      { timeout: QUERY_TIMEOUT }
+    )
+    .catch(() => {});
+  return page.evaluate((cid) => {
+    const el = document.getElementById("card-" + cid);
+    if (!el) return { text: "(no card)", error: true, empty: false };
+    return {
+      text: el.innerText.replace(/\s+/g, " ").trim(),
+      error: el.classList.contains("state-error") || !!el.querySelector(".state-error"),
+      empty: el.classList.contains("state-empty") || !!el.querySelector(".state-empty"),
+    };
+  }, id);
+}
+
 const browser = await chromium.launch();
 try {
-  // 1. App boots and registers every layer (just the stub, in Thread 0).
+  // 1. App boots and registers every layer.
   {
     const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await booted(context, BASE);
@@ -74,43 +100,98 @@ try {
     const n = await page.evaluate(
       () => document.querySelectorAll('input[type=checkbox][id^="toggle-"]').length
     );
-    check(`${EXPECT_LAYERS} layer registered`, n === EXPECT_LAYERS, `found ${n}`);
+    check(`${EXPECT_LAYERS} layers registered`, n === EXPECT_LAYERS, `found ${n}`);
     await context.close();
   }
 
-  // 2. Selecting a point renders the stub layer's card (the engine's
-  //    select -> query -> render path). The stub always returns a result, so a
-  //    card must appear with the picked coordinate echoed back.
+  // 2. The three offline anchors classify New York City Hall against known
+  //    ground truth, fetched from data/app/*.json (no third-party API).
   {
     const context = await browser.newContext({ serviceWorkers: "block" });
-    const page = await booted(context, `${BASE}#point=${POINT}&layers=stub`);
+    const page = await booted(context, `${BASE}#point=${POINT}&layers=${OFFLINE.join(",")}`);
+
+    const boro = await cardText(page, "borough");
+    check("borough classifies City Hall (Manhattan)", !boro.error && /Manhattan/.test(boro.text) && /New York/.test(boro.text), boro.text.slice(0, 70));
+
+    const jud = await cardText(page, "judicial-district");
+    check("judicial-district classifies City Hall (District 1)", !jud.error && /Judicial District\s*1\b/.test(jud.text), jud.text.slice(0, 70));
+
+    const muni = await cardText(page, "municipal-court");
+    check("municipal-court classifies City Hall (Manhattan District 1)", !muni.error && /Manhattan Municipal Court District 1\b/.test(muni.text), muni.text.slice(0, 80));
+
+    // Moving the selection re-classifies (P7 incremental-restyle fast path):
+    // City Hall -> Brooklyn Borough Hall flips borough Manhattan->Brooklyn and
+    // judicial district 1->2, and the matched-region highlight must move with it.
+    const moved = await page.evaluate(async (p2) => {
+      const [lat, lng] = p2.split(",").map(Number);
+      window.NycExplorer.setSelectedPoint(lat, lng);
+      const boroEl = document.getElementById("card-borough");
+      const judEl = document.getElementById("card-judicial-district");
+      for (let i = 0; i < 100; i++) {
+        if (boroEl && /Brooklyn/.test(boroEl.innerText) && judEl && /Judicial District\s*2\b/.test(judEl.innerText)) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return {
+        boro: boroEl ? boroEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
+        jud: judEl ? judEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
+        highlights: document.querySelectorAll("#map .nyc-region-highlight").length,
+      };
+    }, POINT2);
+    check(
+      "point move re-classifies (Manhattan/1 -> Brooklyn/2) and re-highlights",
+      /Brooklyn/.test(moved.boro) && /Judicial District\s*2\b/.test(moved.jud) && moved.highlights >= 1,
+      `boro=${moved.boro.slice(0, 30)} | jud=${moved.jud.slice(0, 30)} | highlights=${moved.highlights}`
+    );
+    await context.close();
+  }
+
+  // 3. The NYC water-click honesty rule, made executable: a mid-East-River point
+  //    is inside the map bounds but in no shoreline-clipped borough, so the
+  //    borough card must show the honest no-result state — never snap to nearest.
+  {
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    const page = await booted(context, `${BASE}#point=${WATER}&layers=borough`);
+    const boro = await cardText(page, "borough");
+    check("mid-river click resolves to no borough (honest empty state)", !boro.error && boro.empty, boro.text.slice(0, 70));
+    await context.close();
+  }
+
+  // 4. A failing data source degrades to that layer's error card + Retry, in
+  //    isolation — the app's per-layer failure-isolation rule. Fail the borough
+  //    anchor fetch; judicial-district (a different anchor file) still classifies.
+  {
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    const page = await booted(
+      context,
+      `${BASE}#point=${POINT}&layers=borough,judicial-district`,
+      (p) => p.route("**/data/app/borough-boundaries.json", (r) => r.fulfill({ status: 503, body: "down" }))
+    );
     await page
       .waitForFunction(
         () => {
-          const el = document.getElementById("card-stub");
-          return el && !el.querySelector(".loading-row") && /Selected point/i.test(el.innerText);
+          const el = document.getElementById("card-borough");
+          return el && el.classList.contains("state-error");
         },
         null,
         { timeout: QUERY_TIMEOUT }
       )
       .catch(() => {});
-    const info = await page.evaluate(() => {
-      const el = document.getElementById("card-stub");
-      if (!el) return { text: "(no card)", error: true };
-      return { text: el.innerText.replace(/\s+/g, " ").trim(), error: el.classList.contains("state-error") };
+    const res = await page.evaluate(() => {
+      const b = document.getElementById("card-borough");
+      const j = document.getElementById("card-judicial-district");
+      return {
+        errored: !!b && b.classList.contains("state-error"),
+        hasRetry: !!b && !!b.querySelector(".retry-btn"),
+        otherOk: !!j && !j.classList.contains("state-error") && /Judicial District\s*1\b/.test(j.innerText),
+      };
     });
-    check(
-      "stub layer renders a card for a selected point",
-      !info.error && /Selected point/i.test(info.text) && /40\.71/.test(info.text),
-      info.text.slice(0, 80)
-    );
+    check("failed layer shows error card + Retry", res.errored && res.hasRetry);
+    check("failure is isolated (other anchor still classifies)", res.otherOk);
     await context.close();
   }
 
-  // 3. Base-map tile failure surfaces an honest, dismissible banner (R6),
-  //    instead of a silently gray map. Fail the CARTO tile CDN and assert the
-  //    banner appears, then that dismissing it hides it. Pure engine behaviour,
-  //    no layer data involved.
+  // 5. Base-map tile failure surfaces an honest, dismissible banner (R6),
+  //    instead of a silently gray map. Pure engine behaviour, no layer data.
   {
     const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await booted(context, BASE, (p) =>

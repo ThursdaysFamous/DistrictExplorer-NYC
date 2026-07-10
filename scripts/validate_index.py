@@ -32,29 +32,31 @@ import subprocess
 import sys
 import tempfile
 
-# Floor, not a moving target: 1 function definition + 11 direct registerLayer()
-# calls + 4 factory bodies (registerSchoolZone / registerCpsNetwork /
-# registerIlgaChamber / registerPolygonLayer). New layers only raise this; a
-# drop means modules were lost.
-MIN_REGISTER_LAYER = 16
+# Engine floor (NYC, re-derived per thread; full §8 re-derivation lands Thread 6):
+# `registerLayer(` = 1 function definition + 4 factory bodies (registerPolygonLayer
+# / registerSchoolZone / registerCpsNetwork / registerIlgaChamber). NYC's Thread-1
+# modules all go through registerPolygonLayer, so they raise the module count
+# checked via EXPECT_LAYER_IDS below, not this literal count.
+MIN_REGISTER_LAYER = 5
 
-# file -> (min features, max features) for the boundary layers fetched by the app.
+# Every layer id that must be registered in index.html (guards module loss more
+# directly than the registerLayer( count now that modules use the factories).
+# Grows thread by thread toward the 24-layer §7 roster.
+EXPECT_LAYER_IDS = [
+    "neighborhood", "zip-code", "borough", "judicial-district", "municipal-court",
+]
+
+# file -> (min features, max features) for the offline-anchor boundary layers
+# fetched by the app (METRO_EXPANSION_PLAYBOOK §8).
 GEOMETRY_FILES = {
-    "school-board-districts.json": (20, 20),
-    "il-supreme-court-districts.json": (5, 5),
-    "ccbr-districts.json": (3, 3),
+    "borough-boundaries.json": (5, 5),
+    "judicial-districts.json": (5, 5),
+    "municipal-court-districts.json": (28, 28),
 }
 
-# file -> minimum key count (officeholder rosters). CPD ships as an empty
-# placeholder until its first scrape lands, so it only has to be a JSON object.
-ROSTER_FILES = {
-    "il-senate-members.json": 59,
-    "il-house-members.json": 118,
-    "school-board-members.json": 20,
-    "congress-roster.json": 17,
-    "cpd-district-info.json": 0,
-    "ccpsa-district-councils.json": 20,  # 22 councils (13 & 21 retired); floor guards a partial scrape
-}
+# file -> minimum key count (officeholder rosters). None yet — the NYC roster
+# pipeline lands in Thread 5 (§9), refilling this map.
+ROSTER_FILES = {}
 
 
 def fail(msg):
@@ -85,10 +87,13 @@ def main():
     if proc.returncode != 0:
         fail("inline script failed `node --check`:\n" + (proc.stderr or proc.stdout))
 
-    # 2. no modules lost
+    # 2. no modules lost — engine floor plus every expected layer id present
     n = len(re.findall(r"registerLayer\(", html))
     if n < MIN_REGISTER_LAYER:
-        fail("registerLayer( count %d < expected floor %d — a module was likely deleted" % (n, MIN_REGISTER_LAYER))
+        fail("registerLayer( count %d < expected floor %d — the engine/factories were likely damaged" % (n, MIN_REGISTER_LAYER))
+    for lid in EXPECT_LAYER_IDS:
+        if ('id: "%s"' % lid) not in html:
+            fail('layer id "%s" is not registered in index.html' % lid)
 
     # 3. nothing embedded inline anymore, and every data file is referenced
     blobs = re.findall(r"var (\w+) = JSON\.parse\('", html)

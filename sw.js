@@ -5,12 +5,12 @@
 // removed entry can't live forever; the activate handler deletes every
 // other-named cache.
 //
-// NYC fork, Thread 0 (METRO_EXPANSION_PLAYBOOK §4): re-cored to the shell only.
-// The static geometry anchors (borough / judicial-district / municipal-court)
-// land in Thread 1 and refill GEOMETRY_URLS; the roster files land with the
-// pipeline in Thread 5 and refill ROSTER_URLS. INVARIANT to restore by Thread 6:
-// every file under data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v1";
+// NYC fork (METRO_EXPANSION_PLAYBOOK §4). Thread 1 added the three static
+// geometry anchors (borough / judicial-district / municipal-court) to
+// GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
+// refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
+// data/app/ appears in exactly one of the two lists.
+const CACHE_NAME = "nyc-district-explorer-shell-v2";
 
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
@@ -29,9 +29,13 @@ const SHELL_URLS = [
 
 // Boundary geometry for offline-anchor layers lives in data/app/*.json, fetched
 // lazily on first toggle. Boundaries change ~once a decade, so serve them
-// cache-first (instant, works offline) and refresh in the background. Empty in
-// Thread 0 — refilled with the NYC static anchors in Thread 1 (§8).
-const GEOMETRY_URLS = [];
+// cache-first (instant, works offline) and refresh in the background. These are
+// the deterministic anchors the smoke test classifies against (§8).
+const GEOMETRY_URLS = [
+  "./data/app/borough-boundaries.json",
+  "./data/app/judicial-districts.json",
+  "./data/app/municipal-court-districts.json",
+];
 
 // Roster/officeholder data (also in data/app/) is refreshed by the weekly CI
 // and must never be served stale — network-first, with the cached copy only as
