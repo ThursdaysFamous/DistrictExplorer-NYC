@@ -123,7 +123,7 @@ Everything below was researched and (where marked) live-verified **July 10, 2026
 | NY Senate roster | nysenate.gov (HTML) | `/senators-committees` — 63 linked cards: name, party, district | **VERIFIED** scrapeable. Official Open Legislation API (`legislation.nysenate.gov/api/3/`) **confirmed key-gated** (401 without key) — optional upgrade |
 | NY Assembly roster | nyassembly.gov (HTML) | `/mem/` — ~150 cards: name + district. **No party field on the page** — store `null`, never guess | **VERIFIED** scrapeable |
 | NY Supreme Court judicial districts (NYC: 1, 2, 11, 12, 13 — elected justices, 14-yr terms) | derived | 1:1 with counties — TIGERweb `State_County/MapServer/13`, `STATE='36' AND COUNTY IN ('005','047','061','081','085')`, relabeled | counties **VERIFIED**; justices roster = per-JD pages on `nycourts.gov` (HTML, one page per district) — link-only at launch |
-| Municipal Court districts (NYC Civil Court — elected judges) | Socrata | `7vpq-4bh4` — map-type: use `/api/geospatial/7vpq-4bh4?method=export&format=GeoJSON`; metadata fields `boro_code`, `boro_name`, `muni_court` | geometry **partially VERIFIED** (metadata + boundary confirmed; export route not exercised). No clean per-district judge roster → link to the Civil Court directory |
+| Municipal Court districts (NYC Civil Court — elected judges) | Socrata | `7vpq-4bh4` — map-type; fields `boro_code`, `boro_name`, `muni_court`. **Route corrected (Thread 1):** the geospatial *export* route returns an empty FeatureCollection — the **v3 view route `/api/v3/views/7vpq-4bh4/query.geojson`** serves the real geometry (loadSocrataGeoJSON route 2) | geometry **VERIFIED** — **28 features**. No clean per-district judge roster → link to the Civil Court directory |
 | NYPD precincts (78, incl. Central Park's 22nd) | Socrata | `y76i-bdw7` `.geojson` (`precinct`) | **VERIFIED** — 78 features |
 | Precinct commanding officers | nyc.gov (HTML) | `nyc.gov/site/nypd/bureaus/patrol/precincts/{Nth}-precinct.page` — bold `Commanding Officer:` label + address + phone | **VERIFIED** on the 13th Precinct page. Ordinals are irregular — drive the loop from `y76i-bdw7`'s `precinct` values, never 1..N |
 | NYPD sectors (303) | Socrata | `5rqd-h5ci` `.geojson` — `sector` ("75D"), `pct`, `patrol_bor`, `nco_phase` | **VERIFIED** — sector geometry is public (rare); no structured NCO roster exists |
@@ -236,7 +236,7 @@ The three static geometry files (Part I §4), all through `build_embedded_bounda
 
 1. **`borough-boundaries.json`** — 5 features from `gthc-hcne`; props `{borocode:int, boroname, county, countyfips}`. One shared cached loader serves `borough`, `borough-president`, and `district-attorney`.
 2. **`judicial-districts.json`** — 5 features: TIGERweb counties relabeled `{district: 1|2|11|12|13, borough, county}`. No live source for this layer exists anywhere — the derivation *is* the layer.
-3. **`municipal-court-districts.json`** — from the `7vpq-4bh4` geospatial export; **pin the exact feature count at conversion time** into `validate_index.py` and the rank slot in §7.
+3. **`municipal-court-districts.json`** — from `7vpq-4bh4` via the **v3 view route** (the geospatial export returns empty — see §6). Feature count pinned at **28** in `validate_index.py`; `key_prop` is a synthesized unique `label` ("Manhattan Municipal Court District 1", …) since `muni_court` repeats across boroughs.
 
 **Smoke test:** primary point **New York City Hall, `40.71274,-74.00602`** — `OFFLINE = ["borough","judicial-district","municipal-court"]`, `EXPECT_DISTRICT = {borough: "Manhattan", judicial-district: "1", municipal-court: <pin at conversion>}` (assert values only after classifying the point against the converted files — the Loop→District-12 protocol). Second point (re-highlight fast path; all three values must differ): **Brooklyn Borough Hall, `40.69354,-73.98963`** → Brooklyn / JD 2. The roster-join check moves to `district-attorney` at City Hall, asserting the field-row *label* renders (names churn; labels don't). New NYC-only check: a mid-East-River point (~`40.7223,-73.9697`) asserts the honest no-match state on `borough` — the water-click honesty rule made executable.
 
@@ -271,12 +271,28 @@ Every builder that splices text keeps the `js_string()` `</script>` + U+2028/U+2
 
 ## 11. Manual operator steps
 
-1. Register a free Socrata app token; add the public constant to `index.html` and the `X-App-Token` repo secret for CI.
-2. Buy/point the domain; replace `CNAME`, manifest name/colors, icons, README.
-3. Supply the initial `borough-officials.json` (10 names from the 5 BP + 5 DA official sites — verified by hand, per the honesty rule).
-4. Review the three static-file conversions (mapshaper validation output) and pin the municipal-court feature count + City Hall ground-truth values into `smoke_test.mjs`/`validate_index.py`.
-5. One live fetch of the Green Book (`a856-gbol.nyc.gov`) to assess upgrading `borough-officials` to a scraper.
-6. Optional: request a Legistar API key and an Open Legislation API key — both are documented upgrades over the HTML scrapes, neither is required at launch.
+Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
+
+1. **Socrata app token** — ✅ obtained + wired into the `SOCRATA_APP_TOKEN` constant in `index.html` (2026-07-10); verified live (requests carry `$$app_token=`, bad token → 403). It is public (a throttling id, not a secret), so committing it is correct — do **not** put a Socrata *API Key Secret* here. ⬜ Still to do: add the same value as the `SOCRATA_APP_TOKEN` **repo secret** so the Thread 5 CI scrapers can send it via `X-App-Token`.
+2. 🟡 **Custom domain** — `CNAME` was removed (was a placeholder); re-add it once a domain is owned. `manifest`/`README`/branding are done; `icons/*.png` are still the Chicago placeholders — replace the 192/512 PNGs.
+3. ⬜ **`borough-officials.json`** (Thread 4) — supply 10 names (5 Borough Presidents + 5 District Attorneys) from the official sites, verified by hand, per the honesty rule.
+4. ✅ **Static-file conversions** (Thread 1) — the three anchors are built, validated (≥99.95% / 0 overlaps), and the municipal-court count (28) + City-Hall/Brooklyn ground truth are pinned in `smoke_test.mjs`/`validate_index.py`.
+5. ⬜ One live fetch of the Green Book (`a856-gbol.nyc.gov`) to assess upgrading `borough-officials` to a scraper (Thread 4).
+6. Optional API keys, both documented upgrades over the HTML scrapes, **neither required at launch**:
+   - 🟡 **NY Senate Open Legislation API key** — **obtained by operator (2026-07-10).** It is a **secret** (key-gated, 401 without it): store it as the repo secret **`NYSENATE_API_KEY`** and read it server-side in the Thread 5 NY Senate scraper — **never** place it in `index.html` (public site). Until Thread 5 wires it, nothing consumes it; the nysenate.gov HTML scrape remains the no-key fallback.
+   - ⬜ **Legistar API key** (City Council roster — the HTML `People.aspx` scrape works without it). Request from Granicus/Legistar.
+
+### API-key summary (what actually needs a key)
+
+| Service | Key needed? | Used for | Where to get it |
+|---|---|---|---|
+| **NYC Planning GeoSearch** (geocoder) | **No** — keyless | address search + POI pins | already wired (§6a) |
+| **NYC Open Data / Socrata** | **App token obtained ✓ + wired** | every Socrata layer + CI scrapers | in `index.html`; add repo secret `SOCRATA_APP_TOKEN` for CI |
+| **U.S. Census TIGERweb / DCP·NYSED ArcGIS** | **No** | legislative + battalion + school-point geometry | — |
+| **congress-legislators** | **No** (public CC0 file) | U.S. House roster | — |
+| **Legistar API** | Optional | City Council roster (HTML scrape works without) | Granicus/Legistar support request |
+| **NY Senate Open Legislation API** | Optional — **key obtained ✓** | State Senate roster (HTML scrape works without) | store as repo secret `NYSENATE_API_KEY`; used in Thread 5 |
+| GeoClient / Geoservice (NYC) | N/A — **skip** | (server-side only, key-gated; GeoSearch replaces it) | — |
 
 ## 12. Per-thread handoff protocol
 
@@ -290,4 +306,64 @@ Identical to `BUILD_PLAYBOOK_1.md` §5. Start of a thread: paste Part I §2 (con
 
 ## Status
 
-_(append handoff notes here as the NYC fork's threads complete)_
+### Thread 0 — Fork & re-core — DONE (2026-07-10)
+
+- `engine` DONE — forked from `DistrictExplorer-CHI`; re-cored to the metro-agnostic engine + one stub layer. Boots on an NYC map; verified headless (Playwright) at New York City Hall `40.71274,-74.00602` — `window.NycExplorer` exported, 1 layer registered, stub card renders, tile-failure banner degrades honestly. `scripts/smoke_test.mjs` (4 checks) passes.
+- `stub` STUB — single placeholder layer (`id: "stub"`, group `geography`). No network: empty overlay FeatureCollection, `query()` echoes the picked coordinate, `render()` links the playbook. `EXPECT_LAYERS=1`. Deleted when Thread 1's real geography layers land.
+- Core constants swapped (§1): `NYC_BBOX` `[-74.27,40.48,-73.68,40.93]` / `NYC_CENTER` `[40.7128,-74.0060]` (minZoom 10); permalink gate `lat 40.4–41.05, lng -74.3–-73.6`; geolocation + map/search strings; Socrata host → `data.cityofnewyork.us`; TIGERweb `STATE='36'`; verified date `July 10, 2026`; debug namespace `window.NycExplorer` (twinned in `smoke_test.mjs`); preconnect/dns-prefetch hosts. `GROUPS` unchanged. `LAYER_AREA_RANK = ["stub"]` (full §7 rank filled in Threads 1–6).
+- Geocoders swapped (§6a): type-ahead → GeoSearch `/v2/autocomplete`; POI → GeoSearch `/v2/search` (both keyless, NYC-scoped, no viewbox). Nominatim retained only as documented fallback.
+- Socrata app-token wiring added (§6b): `SOCRATA_APP_TOKEN` top-of-file constant (empty) + `withAppToken()` no-op until the operator registers a token; applied to both Socrata loaders. **Manual step (§11.1) still pending.**
+- Branding: title/meta/manifest/theme-color, NYC flag palette (`--nyc-blue #2A6EBB`, `--nyc-blue-deep #12305C`, `--nyc-orange #FF6319`), favicon = NYC flag bands, footer sources, feedback subject. **Chicago six-pointed star replaced with a map-pin motif** (masthead + selection marker). `icons/*.png` are still the Chicago placeholders — **operator to replace (§11.2).**
+- `CNAME` set to placeholder `nycdistricts.com` — **operator must own/confirm before deploying to `main` (§11.2).**
+- `sw.js` re-cored to shell-only (`CACHE_NAME` → `nyc-district-explorer-shell-v1`); `GEOMETRY_URLS`/`ROSTER_URLS` emptied (refilled Threads 1/5). Orphaned Chicago `data/` removed — no Chicago rosters ship in the NYC app.
+- `engine` SURPRISE — the four reusable factories (`registerPolygonLayer` / `registerSchoolZone` / `registerCpsNetwork` / `registerIlgaChamber`) and the shared Socrata/ArcGIS/TIGERweb loaders are interleaved with the deleted module registration calls, not contiguous; the re-core deletes only the 22 `registerXxx({…})` call blocks and their Chicago preamble, preserving the factories. `index.html` 211 KB → 150 KB.
+
+**Carried over as templates, still Chicago, deferred by design:** `scripts/*.py` scraper/builder pairs (→ Thread 5, §9), the 4 Chicago roster-update workflows in `.github/workflows/` (they fail safe at the `validate_index.py` gate — `MIN_REGISTER_LAYER` no longer met — so no bad PR is opened; replaced in Thread 5), `scripts/validate_index.py` (re-derived in Thread 6, §8), factory doc-comments that still cite Chicago datasets. Generic infra kept as-is: `build_embedded_boundaries.py`, `vendor_leaflet.sh`, `deploy-pages.yml`, `smoke-test.yml`, `docs/BUILD_PLAYBOOK_1.md`, `docs/OPTIMIZATION_PLAYBOOK.md`.
+
+_Next: Thread 1 — offline anchors + geography (borough / judicial-district / municipal-court static files; neighborhood; zip-code). Pin the smoke-test ground truth and set `EXPECT_LAYERS` accordingly._
+
+### Thread 1 — Offline anchors + Geography — DONE (2026-07-10)
+
+Five layers registered (`EXPECT_LAYERS = 5`); `LAYER_AREA_RANK` = borough → judicial-district → municipal-court → zip-code → neighborhood. All verified headless (Playwright) at NYC City Hall + Times Square + Brooklyn Borough Hall; the 3 anchors are the deterministic smoke-test ground truth. `scripts/smoke_test.mjs` (10 checks) and `scripts/validate_index.py` both pass.
+
+- `borough` DONE — offline anchor `data/app/borough-boundaries.json` (5 shoreline-clipped counties from Socrata `gthc-hcne`; county + FIPS added via the §6d.1 crosswalk). Shared cached loader `loadBoroughBoundaries` — reused by borough-president / district-attorney in Thread 4. City Hall → Manhattan / New York Co. / 36061.
+- `judicial-district` DONE — offline anchor `data/app/judicial-districts.json` (5 TIGERweb counties relabeled JD 1/2/11/12/13; no live source — the derivation IS the layer). Link-only to the court (justices elected countywide, 14-yr terms). City Hall → JD 1.
+- `municipal-court` DONE — offline anchor `data/app/municipal-court-districts.json` (**28** features). Link-only to the NYC Civil Court directory. City Hall → "Manhattan Municipal Court District 1".
+- `neighborhood` DONE — live Socrata `9nt8-h7nd` (262 NTAs). Times Square → "Midtown-Times Square / MN0502 / Manhattan" (matches §6 verified sample). `ntatype` code mapped to a word onto a derived `ntatype_label` (0=residential hidden; 5 Rikers, 6 non-residential, 7 cemetery, 8 airport, 9 park) so park/airport clicks read honestly (§6d.6).
+- `zip-code` DONE — live Socrata `pri4-ifjk` (178 MODZCTA). Times Square → 10036, pop 27428.
+- `municipal-court` SURPRISE — the §6 geospatial *export* route returns an **empty** FeatureCollection; the **v3 view route** (`/api/v3/views/7vpq-4bh4/query.geojson`, = loadSocrataGeoJSON route 2) serves the real 28-feature geometry. Playbook §6/§8 corrected. `muni_court` repeats across boroughs, so the build synthesizes a unique `label` for `key_prop`.
+- `anchors` SURPRISE — all three built through `build_embedded_boundaries.py` (15% Visvalingam keep-shapes, 6-decimal): borough 99.95% / judicial 100% / municipal 100% point-in-district agreement on the 2,000-point protocol, 0 topology overlaps. TIGERweb county geometry is a single Polygon incl. water (so a mid-East-River point still classifies into a *judicial* district — legally correct), while `borough` (shoreline-clipped MultiPolygon) returns **no borough** there — the water-click honesty rule, now an executable smoke check. Rockaway peninsula (across Jamaica Bay) correctly resolves to Queens (MultiPolygon spot-check).
+
+Gates re-pinned: `smoke_test.mjs` EXPECT_LAYERS=5 + City-Hall/Brooklyn ground truth + mid-river no-borough + per-layer failure isolation; `sw.js` `GEOMETRY_URLS` = the 3 anchors, `CACHE_NAME` → `…-shell-v2`; `validate_index.py` GEOMETRY_FILES (5/5/28) + `EXPECT_LAYER_IDS` + empty ROSTER_FILES. Full-precision sources committed under `data/*.geojson` (excluded from the Pages artifact by `deploy-pages.yml`).
+
+_Next: Thread 2 — Public Safety (NYPD precinct + sector `subOf`, police/fire stations nearest-3, FDNY battalion). `nypd-precinct-info.json` ships as an empty placeholder._
+
+### Thread 2 — Public Safety — DONE (2026-07-10)
+
+Five safety layers registered (`EXPECT_LAYERS = 10`). Verified headless at City Hall (all 5 render; `subOf` nesting confirmed on map + sidebar). Smoke test (10 checks) + `validate_index.py` pass. `CNAME` set to `nyc.chidistricts.com` (operator-owned subdomain). Socrata app token wired + verified.
+
+- `police-precinct` DONE — Socrata `y76i-bdw7` (78). Joins `data/app/nypd-precinct-info.json` (CO roster, **empty placeholder** until Thread 5) **and** the FacDB station houses (address + map pin, keyed on `policeprct`) so the card carries real content pre-scrape (City Hall → Precinct 1, 1st Precinct station @ 16-20 Ericsson Pl). Oversight links: NYPD precinct page (ordinal URL) + CCRB (labeled appointed/citywide, non-elected).
+- `police-sector` STUB-roster — Socrata `5rqd-h5ci` (303), `subOf: "police-precinct"` (nests + frames like Chicago beats). Shows sector + parent precinct + patrol borough (code→name map). No NCO roster exists.
+- `police-station` DONE — FacDB `ji82-xba5`, nearest-3 haversine.
+- `fire-station` DONE — Socrata `hc8x-tcnd` (219), nearest-3.
+- `fire-battalion` DONE — DCP ArcGIS `NYC_Fire_Battalions` (49, `FireBN`) via `registerPolygonLayer` + `loadArcGISGeoJSON`.
+- SURPRISE — **FacDB `factype` is `'POLICE STATION'` (uppercase)**; the playbook's `'Police Station'` matches **0 rows** (80 with the uppercase value). Used `$where=factype='POLICE STATION'`.
+- SURPRISE — **NYC point datasets (FacDB, firehouses) serve NO geometry on the `.geojson` route** — coordinates live in `latitude`/`longitude` *properties*. Added a reusable `makeSocrataPointLoader(dataset, where, latField, lngField)` that builds a real Point FeatureCollection from the `.json` rows (used by both nearest-3 layers; reused by school-site in Thread 3). Added `registerNearestPointLayer` factory + `toTitleCase`/`ordinalSuffix` helpers.
+
+Gates: `smoke_test.mjs` EXPECT_LAYERS=10 (safety layers are live-API, not asserted as CI ground truth); `sw.js` `ROSTER_URLS` += `nypd-precinct-info.json`, `CACHE_NAME` → `…-shell-v3`; `validate_index.py` EXPECT_LAYER_IDS += the 5 safety ids, ROSTER_FILES += `nypd-precinct-info.json` (min 0).
+
+_Next: Thread 3 — Schools (ES/MS/HS attendance zones with honest choice-based empty states, community school district, CEC placeholder, school-site nearest-3). School-zone dataset IDs rotate yearly — add the freshness chore._
+
+### Thread 3 — Schools — DONE (2026-07-10)
+
+Six schools layers registered (`EXPECT_LAYERS = 16`). Verified headless at Park Slope / Brooklyn (CSD 15) — zoned ES + honest choice-based empty states for MS/HS; screenshot. Smoke (16 checks) + `validate_index.py` + the new freshness check all pass.
+
+- `es-zone` / `ms-zone` / `hs-zone` DONE — Socrata `cmjf-yawu` / `t26j-jbq7` / `ruu9-egea` via the generalized `registerSchoolZone` factory. `schoolProfileHtml` re-pointed off Chicago's cps.edu to **MySchools** (`/en/schools/<dbn>/`, verified 200). Honest empty states: the factory keys "is there a zoned school" on the **DBN** (MS/HS choice catchments carry a district placeholder label like `"D15"` with a null DBN), so a choice-based area renders opts.emptyNote instead of a bogus school. Park Slope → ES "P.S. 321", MS/HS "None — choice-based / by application".
+- `school-district` DONE — Socrata `8ugf-3d8u` (32) via `registerPolygonLayer`. Superintendent link-only (appointed by the Chancellor, not elected). `schooldist` arrives as a float string (`"15.0"`) — normalized to `"15"` in the loader (`intField`).
+- `cec` DONE — shares the `school-district` geometry; `data/app/cec-members.json` ships **empty placeholder** until the Thread 5 Playwright scrape (schools.nyc.gov WAF-blocks plain clients). Card carries the "parent-elected council — not a school board (NYC has mayoral control)" one-liner (§7).
+- `school-site` DONE — NYSED ArcGIS `NYS_Schools` layers 2/3/4 (public 1591 / private 809 / charter 431), 5-county filter, `outSR=4326`. Public exceeds the 1000-row transfer cap → added a **paged** ArcGIS loader (§5.5). `registerNearestPointLayer` across the merged, type-tagged points.
+- SURPRISE — the zone datasets are **"School Zones 2024-2025"**, last touched 2024-03 (~28 months). The playbook's ">14-month `rowsUpdatedAt`" heuristic would cry wolf on this genuinely-current data (NYC leaves zones untouched for 2+ years), so the freshness chore was **refined**: it now flags a 404 **or** a *newer school-year zones dataset appearing in the catalog* (per level), which is the real "time to swap the id" signal. Catalog confirms 2024-2025 is the latest → check passes; it will fire when 2025-2026 lands.
+
+Freshness chore added (§9): `scripts/check_school_zone_ids.py` + `.github/workflows/check-school-zone-ids.yml` (monthly; opens a deduped tracking **issue**, never a PR). Gates: `smoke_test.mjs` EXPECT_LAYERS=16; `sw.js` `ROSTER_URLS` += `cec-members.json`, `CACHE_NAME` → `…-shell-v4`; `validate_index.py` += the 6 school ids + `cec-members.json` (min 0).
+
+_Next: Thread 4 — Political (10 layers: council, election-district `subOf` assembly, community district/board live join, congress, state senate/assembly, judicial already done, borough-president, DA). Heaviest thread; operator supplies `borough-officials.json`. The NY Senate roster can use the Open Legislation key (Thread 5)._
