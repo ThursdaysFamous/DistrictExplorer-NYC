@@ -70,7 +70,7 @@ docs/BUILD_PLAYBOOK_1.md      engine architecture contract + Chicago build/statu
 docs/OPTIMIZATION_PLAYBOOK.md optimization & refinement playbook
 ```
 
-> **Operator setup still pending** (playbook §11): confirm the `SOCRATA_APP_TOKEN` repo secret for CI (the app-side token is already wired in `index.html`), replace the placeholder PWA icons in `icons/app/`, and supply the initial `borough-officials.json` (5 Borough Presidents + 5 District Attorneys, hand-verified — officeholders are never guessed).
+> **Operator setup still pending** (playbook §11): replace the placeholder PWA icons in `icons/app/`, and supply the initial `borough-officials.json` (5 Borough Presidents + 5 District Attorneys, hand-verified — officeholders are never guessed). All CI secrets (`SOCRATA_APP_TOKEN`, `NYSENATE_API_KEY`, `OPENSTATES_API_KEY`) are in place.
 
 ## Not for legal or official use
 
