@@ -1056,10 +1056,12 @@
       <a href="https://overberg.co" target="_blank" rel="noopener">overberg.co</a>
       <a href="https://github.com/sponsors/ThursdaysFamous" target="_blank" rel="noopener">💛 Support this project</a>
     </div>
+    <!-- ==== ENGINE:BEGIN metro-links-html ==== -->
     <div class="footer-metros" id="footer-metros" hidden>
       <span class="footer-metros-label">Explore another metro</span>
       <!-- sibling District Explorer links injected at boot from METRO_EXPLORERS -->
     </div>
+    <!-- ==== ENGINE:END metro-links-html ==== -->
   </div>
 </footer>
 
@@ -1088,23 +1090,45 @@
    * CORE — shared across every layer module. Built once; rarely touched.
    * ======================================================================= */
 
+  /* ==== METRO:BEGIN config ==== */
+  /* Everything metro-specific that the shared ENGINE blocks below reference
+   * lives here, so an ENGINE block never needs a per-city edit. Fenced ENGINE
+   * blocks are byte-identical across every metro fork — see
+   * docs/ENGINE_SYNC.md and scripts/check_engine_parity.py. */
+  var THIS_METRO = "nyc";               // key into METRO_EXPLORERS below
+  var METRO_NAME = "New York City";     // used in user-facing strings
   // Practical NYC bounds (METRO_EXPANSION_PLAYBOOK §6d.3): SW Tottenville →
   // NE north Bronx, out to the Rockaways. The map is water-heavy — many
   // in-bounds clicks land in rivers/bays and honestly resolve to no district.
-  var NYC_BBOX = { minLng: -74.27, minLat: 40.48, maxLng: -73.68, maxLat: 40.93 };
-  var NYC_CENTER = [40.7128, -74.0060];
-
-  // Socrata app token (METRO_EXPANSION_PLAYBOOK §6b + §11.1). NYC's open-data
-  // portal throttles anonymous requests (403s on .json paths), so runtime
-  // requests append `$$app_token=`. This is a throttling identifier, not a
-  // secret — public exposure is Socrata's intended use, so committing it here is
-  // correct (do NOT put an API Key *secret* here). withAppToken() is a no-op if
-  // it is ever blanked.
+  var METRO_BBOX = { minLng: -74.27, minLat: 40.48, maxLng: -73.68, maxLat: 40.93 };
+  var METRO_CENTER = [40.7128, -74.0060];
+  // Permalink sanity gate: the *greater* metro area (wider than METRO_BBOX).
+  var PERMALINK_GATE = { minLat: 40.4, maxLat: 41.05, minLng: -74.3, maxLng: -73.6 };
+  var SOCRATA_HOST = "https://data.cityofnewyork.us";
+  // Socrata app token: some metros' portals throttle anonymous requests
+  // (METRO_EXPANSION_PLAYBOOK §6b + §11.1 — NYC 403s on anonymous .json
+  // paths). It is a throttling identifier, not a secret — public exposure is
+  // Socrata's intended use (do NOT put an API Key *secret* here). Blank =
+  // sent as-is.
   var SOCRATA_APP_TOKEN = "mde4YTGz0w7M4jDhUJ7WVn85W";
+  var REPO_ISSUES = "https://github.com/ThursdaysFamous/DistrictExplorer-NYC/issues/new";
+  var FEEDBACK_SUBJECT = "NYC District Explorer feedback";
+  /* Sibling District Explorer deployments — one canonical list shared by every
+   * metro fork. When a new metro launches, add its entry here (and in each
+   * sibling fork). THIS_METRO drops the fork's own entry so the list can be
+   * copied verbatim between forks. */
+  var METRO_EXPLORERS = [
+    { id: "chicago", label: "Chicago", url: "https://chidistricts.com/" },
+    { id: "nyc", label: "New York City", url: "https://nyc.chidistricts.com/" }
+  ];
+  /* ==== METRO:END config ==== */
+
+  /* ==== ENGINE:BEGIN app-token ==== */
   function withAppToken(url) {
     if (!SOCRATA_APP_TOKEN) return url;
     return url + (url.indexOf("?") === -1 ? "?" : "&") + "$$app_token=" + SOCRATA_APP_TOKEN;
   }
+  /* ==== ENGINE:END app-token ==== */
 
   /* ---------- map-pin geometry (used for the selection marker + decorative
    * icons). NYC has no flag star like Chicago's, so the wordmark/marker motif
@@ -1191,6 +1215,7 @@
     probe.src = WATER_FERRY_URL;
   }
 
+  /* ==== ENGINE:BEGIN sanitize ==== */
   /* ---------- sanitize: escape any external string before it touches innerHTML ---------- */
   function sanitize(str) {
     if (str === null || str === undefined) return "";
@@ -1218,6 +1243,8 @@
     }
   }
 
+  /* ==== ENGINE:END sanitize ==== */
+  /* ==== ENGINE:BEGIN point-in-polygon ==== */
   /* ---------- point-in-polygon: GeoJSON Polygon / MultiPolygon, holes-aware ---------- */
   function pointInRing(pt, ring) {
     // standard even-odd ray casting against a single ring
@@ -1254,6 +1281,8 @@
     return false;
   }
 
+  /* ==== ENGINE:END point-in-polygon ==== */
+  /* ==== ENGINE:BEGIN polygon-containment ==== */
   /* ---------- polygon-in-polygon containment (used by the hover explorer's
    * "districts fully inside the one you're over" outlining). There's no
    * geometry library here, so this is a hand-rolled, vertex-based test:
@@ -1308,7 +1337,7 @@
 
   // planar (degree-space) distance from a [lng,lat] point to a geometry's
   // nearest boundary edge. Only used as a small on-boundary tolerance, so not
-  // scaling longitude by cos(lat) is fine at New York City's latitude.
+  // scaling longitude by cos(lat) is fine at this metro's latitude.
   function distToBoundary(pt, geometry) {
     var min = Infinity;
     eachRing(geometry, function (ring) {
@@ -1366,6 +1395,8 @@
     return !(x[2] < y[0] || x[0] > y[2] || x[3] < y[1] || x[1] > y[3]);
   }
 
+  /* ==== ENGINE:END polygon-containment ==== */
+  /* ==== ENGINE:BEGIN fetch-retry ==== */
   /* ---------- fetch JSON with retry + timeout. The abort timer stays armed
    * through the body read, not just the headers — every caller parses JSON,
    * and a response that stalls mid-body would otherwise hang its layer's
@@ -1408,11 +1439,13 @@
    * layers (police districts/stations, Socrata rosters) keep the 9 s default. ---------- */
   var REMOTE_GEOJSON_TIMEOUT_MS = 30000;
 
+  /* ==== ENGINE:END fetch-retry ==== */
+  /* ==== ENGINE:BEGIN probe-geometry-column ==== */
   /* ---------- probe a Socrata dataset for its geometry column name ---------- */
   var geometryColumnCache = {};
   function probeGeometryColumn(datasetId) {
     if (geometryColumnCache[datasetId]) return Promise.resolve(geometryColumnCache[datasetId]);
-    var url = "https://data.cityofnewyork.us/resource/" + datasetId + ".json?$limit=1";
+    var url = withAppToken(SOCRATA_HOST + "/resource/" + datasetId + ".json?$limit=1");
     return fetchJSONWithRetry(url, {}, 1)
       .then(function (rows) {
         var row = rows && rows[0];
@@ -1430,6 +1463,8 @@
       .catch(function () { return "the_geom"; });
   }
 
+  /* ==== ENGINE:END probe-geometry-column ==== */
+  /* ==== ENGINE:BEGIN state ==== */
   /* ---------- global state ---------- */
   var state = {
     selectedPoint: null,   // {lat, lng}
@@ -1437,11 +1472,12 @@
     layersOn: {}           // id -> boolean
   };
 
+  /* ==== ENGINE:END state ==== */
   /* =========================================================================
    * MAP
    * ======================================================================= */
 
-  var map = L.map("map", { minZoom: 10, maxZoom: 18, zoomControl: false }).setView(NYC_CENTER, 11);
+  var map = L.map("map", { minZoom: 10, maxZoom: 18, zoomControl: false }).setView(METRO_CENTER, 11);
   L.control.zoom({ position: "bottomright" }).addTo(map);
   var baseTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     maxZoom: 19,
@@ -1556,6 +1592,7 @@
     }).catch(function () { /* keep the default teardrop marker */ });
   }
 
+  /* ==== ENGINE:BEGIN permalink ==== */
   /* =========================================================================
    * SHAREABLE URL — #point=lat,lng&layers=id1,id2 mirrors the current
    * selection so any view can be copied out of the URL bar (or via the
@@ -1598,13 +1635,17 @@
     if (params.point) {
       var pieces = params.point.split(",");
       var lat = parseFloat(pieces[0]), lng = parseFloat(pieces[1]);
-      // sanity-bound to the greater New York City area this app serves
-      if (isFinite(lat) && isFinite(lng) && lat > 40.4 && lat < 41.05 && lng > -74.3 && lng < -73.6) {
+      // sanity-bound to the greater metro area this app serves (PERMALINK_GATE)
+      if (isFinite(lat) && isFinite(lng) &&
+          lat > PERMALINK_GATE.minLat && lat < PERMALINK_GATE.maxLat &&
+          lng > PERMALINK_GATE.minLng && lng < PERMALINK_GATE.maxLng) {
         setSelectedPoint(lat, lng);
       }
     }
   }
 
+  /* ==== ENGINE:END permalink ==== */
+  /* ==== ENGINE:BEGIN selection-controls ==== */
   map.on("click", function (e) {
     setSelectedPoint(e.latlng.lat, e.latlng.lng, { skipPan: true });
   });
@@ -1614,6 +1655,8 @@
     setSelectedPoint(c.lat, c.lng, { skipPan: true });
   });
 
+  /* ==== ENGINE:END selection-controls ==== */
+  /* ==== ENGINE:BEGIN geolocation ==== */
   /* =========================================================================
    * GEOLOCATION — "Use my current location" via the browser's
    * navigator.geolocation API. Feeds straight into the same
@@ -1640,8 +1683,8 @@
       function (pos) {
         locateBtn.disabled = false;
         var lat = pos.coords.latitude, lng = pos.coords.longitude;
-        if (lat < NYC_BBOX.minLat || lat > NYC_BBOX.maxLat || lng < NYC_BBOX.minLng || lng > NYC_BBOX.maxLng) {
-          geoStatusEl.textContent = "Your current location looks like it's outside the New York City area this app covers.";
+        if (lat < METRO_BBOX.minLat || lat > METRO_BBOX.maxLat || lng < METRO_BBOX.minLng || lng > METRO_BBOX.maxLng) {
+          geoStatusEl.textContent = "Your current location looks like it's outside the " + METRO_NAME + " area this app covers.";
           geoStatusEl.className = "geo-status err";
           return;
         }
@@ -1668,6 +1711,7 @@
     );
   });
 
+  /* ==== ENGINE:END geolocation ==== */
   /* ---------- "Layers" drawer button — collapses the results rail so the
    * map gets the full width; aria-expanded mirrors the rail state ---------- */
   var drawerBtn = document.getElementById("layer-drawer-btn");
@@ -1680,6 +1724,7 @@
     map.invalidateSize(); // the map container just changed width
   });
 
+  /* ==== ENGINE:BEGIN feedback ==== */
   /* =========================================================================
    * FEEDBACK — a serverless "report a bug / leave a comment" modal. There is
    * no backend here, so a submission is routed either to a prefilled GitHub
@@ -1687,7 +1732,7 @@
    * report is reproducible. Keep this independent of any layer.
    * ======================================================================= */
   (function wireFeedback() {
-    var REPO_ISSUES = "https://github.com/ThursdaysFamous/DistrictExplorer/issues/new";
+    // REPO_ISSUES + FEEDBACK_SUBJECT come from the METRO config block.
     var EMAIL = "adam@overberg.co";
     var modal = document.getElementById("feedback-modal");
     var openBtn = document.getElementById("feedback-btn");
@@ -1730,7 +1775,7 @@
     // The mailto carries whatever is currently typed, so rebuild it live.
     function refreshMailto() {
       emailLink.href = "mailto:" + EMAIL +
-        "?subject=" + encodeURIComponent("NYC District Explorer feedback") +
+        "?subject=" + encodeURIComponent(FEEDBACK_SUBJECT) +
         "&body=" + encodeURIComponent(buildBody());
     }
 
@@ -1752,6 +1797,7 @@
     refreshMailto();
   })();
 
+  /* ==== ENGINE:END feedback ==== */
   /* =========================================================================
    * GEOCODER — NYC Planning GeoSearch (Pelias), debounced, NYC-scoped, attributed.
    * Swappable: everything lives behind geocodeAddress().
@@ -2685,6 +2731,7 @@
     });
   }
 
+  /* ==== ENGINE:BEGIN render-helper ==== */
   /* ---------- small render helper shared by modules ---------- */
   function renderFieldList(fields) {
     // fields: [{label, value}] — value is sanitized here, once, in the shared helper
@@ -2723,6 +2770,7 @@
     return dl;
   }
 
+  /* ==== ENGINE:END render-helper ==== */
   /* =========================================================================
    * SHARED DATA LOADERS + LAYER FACTORIES
    * The metro-agnostic engine the playbook (§2) says to reuse: the Socrata /
@@ -2734,6 +2782,7 @@
    * behavior and are re-pointed as each real NYC layer lands.
    * ======================================================================= */
 
+  /* ==== ENGINE:BEGIN socrata-loader ==== */
   /* ---------- true if at least one feature has real (non-null) geometry.
    * Some older "legacy" Socrata boundary datasets return HTTP 200 from the
    * primary .geojson route with every feature's geometry stripped to null
@@ -2756,9 +2805,9 @@
    * plain .catch() never sees it. ---------- */
   function socrataRouteUrls(datasetId) {
     return [
-      "https://data.cityofnewyork.us/resource/" + datasetId + ".geojson?$limit=1000",
-      "https://data.cityofnewyork.us/api/v3/views/" + datasetId + "/query.geojson",
-      "https://data.cityofnewyork.us/api/geospatial/" + datasetId + "?method=export&format=GeoJSON"
+      SOCRATA_HOST + "/resource/" + datasetId + ".geojson?$limit=1000",
+      SOCRATA_HOST + "/api/v3/views/" + datasetId + "/query.geojson",
+      SOCRATA_HOST + "/api/geospatial/" + datasetId + "?method=export&format=GeoJSON"
     ].map(withAppToken);
   }
 
@@ -2785,6 +2834,8 @@
     return tryRoutes(socrataRouteUrls(datasetId), hasUsableGeometry, datasetId + " geometry");
   }
 
+  /* ==== ENGINE:END socrata-loader ==== */
+  /* ==== ENGINE:BEGIN cached-loaders ==== */
   /* ---------- one shared in-flight/cached promise per loader fn, so overlay.load()
    * and query() never trigger two separate downloads of the same boundaries ---------- */
   function makeCached(loadFn) {
@@ -2804,6 +2855,8 @@
     return makeCached(function () { return loadSocrataGeoJSON(datasetId); });
   }
 
+  /* ==== ENGINE:END cached-loaders ==== */
+  /* ==== ENGINE:BEGIN arcgis-loader ==== */
   function loadArcGISGeoJSON(serviceUrl) {
     // geometryPrecision=6 (~0.11 m) trims coordinate digits the server would
     // otherwise send at full float precision — no visible or classification
@@ -2816,6 +2869,8 @@
       });
   }
 
+  /* ==== ENGINE:END arcgis-loader ==== */
+  /* ==== ENGINE:BEGIN find-prop-ci ==== */
   /* ---------- case-insensitive property lookup — Socrata field-name casing/
    * naming varies dataset to dataset (see probeGeometryColumn's rationale) ---------- */
   function findPropCI(props, candidates) {
@@ -2850,6 +2905,7 @@
     return found;
   }
 
+  /* ==== ENGINE:END find-prop-ci ==== */
   /* ---------- declarative factory for single-source polygon layers ----------
    * The plain "load a boundary set, find the polygon containing the point, read
    * a few properties, list them" shape recurs across layers with no async roster
@@ -3073,7 +3129,7 @@
   function makeSocrataPointLoader(datasetId, whereClause, latField, lngField) {
     return makeCached(function () {
       var q = "?$limit=1000" + (whereClause ? "&$where=" + encodeURIComponent(whereClause) : "");
-      var url = withAppToken("https://data.cityofnewyork.us/resource/" + datasetId + ".json" + q);
+      var url = withAppToken(SOCRATA_HOST + "/resource/" + datasetId + ".json" + q);
       return fetchJSONWithRetry(url, {}, 2).then(function (rows) {
         var feats = [];
         (rows || []).forEach(function (r) {
@@ -3789,6 +3845,7 @@
    * straight-line distance instead of point-in-polygon.
    * ======================================================================= */
 
+  /* ==== ENGINE:BEGIN haversine ==== */
   /* ---------- great-circle distance in miles ---------- */
   function haversineMiles(lat1, lng1, lat2, lng2) {
     var R = 3958.8;
@@ -3805,6 +3862,7 @@
     return { lat: g.coordinates[1], lng: g.coordinates[0] };
   }
 
+  /* ==== ENGINE:END haversine ==== */
   /* ---------- representative lat/lng for a polygon feature: the vertex-average
    * of its exterior ring(s). Used to give Polygon/MultiPolygon features a single
    * point for the nearest-N proximity pattern below (haversineMiles wants two
@@ -3981,8 +4039,8 @@
    * for roster tables like the alderman list, which have no geometry column ---------- */
   function loadSocrataJSON(datasetId) {
     var urls = [
-      "https://data.cityofnewyork.us/resource/" + datasetId + ".json?$limit=1000",
-      "https://data.cityofnewyork.us/api/v3/views/" + datasetId + "/query.json"
+      SOCRATA_HOST + "/resource/" + datasetId + ".json?$limit=1000",
+      SOCRATA_HOST + "/api/v3/views/" + datasetId + "/query.json"
     ].map(withAppToken);
     return tryRoutes(urls, function (rows) { return Array.isArray(rows) && rows.length; }, datasetId + " rows");
   }
@@ -4512,15 +4570,7 @@
   var verifiedEl = document.getElementById("verified-date");
   verifiedEl.textContent = "July 10, 2026";
 
-  /* Sibling District Explorer deployments — one canonical list shared by every
-   * metro fork. When a new metro launches, add its entry here (and in each
-   * sibling fork). THIS_METRO is the only fork-specific value: it drops the
-   * fork's own entry so the list can be copied verbatim between forks. */
-  var THIS_METRO = "nyc";
-  var METRO_EXPLORERS = [
-    { id: "chicago", label: "Chicago", url: "https://chidistricts.com/" },
-    { id: "nyc", label: "New York City", url: "https://nyc.chidistricts.com/" }
-  ];
+  /* ==== ENGINE:BEGIN metro-links ==== */
   (function renderMetroLinks() {
     var row = document.getElementById("footer-metros");
     for (var i = 0; i < METRO_EXPLORERS.length; i++) {
@@ -4536,6 +4586,7 @@
     // keep the row hidden if every listed metro is this one (label-only row)
     if (row.querySelector("a")) row.hidden = false;
   })();
+  /* ==== ENGINE:END metro-links ==== */
 
   // expose a couple of things for later module threads / debugging, without
   // polluting global scope beyond one namespace

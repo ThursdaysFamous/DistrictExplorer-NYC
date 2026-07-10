@@ -50,6 +50,15 @@ All inside `index.html`, wrapped in one IIFE. The full contract and per-thread b
 
 **Honesty rules (non-negotiable, enforced in review):** officeholder data is never guessed. Where no verifiable roster source exists, cards link to the official body instead of inventing a name. External strings are always sanitized or set via `textContent`.
 
+## Cross-metro engine parity
+
+This app is the NYC fork in a family of sibling metro forks; **Chicago (`ThursdaysFamous/DistrictExplorer-CHI` / chidistricts.com) is the reference implementation**. The metro-agnostic engine inside `index.html` is fenced with `/* ==== ENGINE:BEGIN <name> ==== */ … ENGINE:END` markers and must stay **byte-identical across forks**; everything city-specific those blocks reference lives in the `METRO:BEGIN config` block near the top of the script. When editing:
+
+- Don't edit inside an ENGINE fence unless the change is a verbatim port of a Chicago-repo engine diff (or will be landed there first) — port the **actual git diff**, never re-implement from a prose prompt (same prompt ≠ same code; that's exactly how the forks drifted before the fences existed).
+- Never inline a city-specific value in an ENGINE block — add a variable to the METRO config block instead.
+- Verify with `python3 scripts/check_engine_parity.py index.html` (fence lint; `validate_index.py` also runs it) or `--against https://chidistricts.com/ --strict` (byte comparison). The scheduled cross-fork watcher runs in the Chicago repo; this repo's `engine-parity.yml` is `workflow_dispatch`-only.
+- Full protocol + the known reconciliation backlog: `docs/ENGINE_SYNC.md`.
+
 ## Data pipeline
 
 Most layers fetch live public APIs at runtime (Chicago Data Portal / Socrata, CPD ArcGIS, Cook County GIS, Census TIGERweb, Nominatim). Layers with **no public API** ship their data as same-origin files under `data/app/`, fetched on first toggle:
