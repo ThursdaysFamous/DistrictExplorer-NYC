@@ -2854,10 +2854,17 @@
   function registerPolygonLayer(opts) {
     var load = opts.loader;
     var keyedFields = opts.fields.filter(function (f) { return f.keys; });
+    var primaryField = keyedFields.filter(function (f) { return f.primary; })[0] || null;
     registerLayer({
       id: opts.id,
       group: opts.group,
       label: opts.label,
+      // hover popup reads the same primary field the card's headline row shows,
+      // so the two surfaces can never disagree on a district's identity.
+      hoverName: primaryField ? function (feature) {
+        var v = findPropCI(feature.properties || {}, primaryField.keys);
+        return (v == null || v === "") ? null : String(v);
+      } : undefined,
       overlay: { load: load, style: opts.style },
       query: function (point, seq) {
         return load().then(function (geojson) {
@@ -3133,6 +3140,23 @@
     id: "police-precinct",
     group: "safety",
     label: "NYPD Precinct",
+    // hover popup: same `precinct` property the card's query reads.
+    hoverName: function (feature) {
+      var pct = findPropCI(feature.properties || {}, ["precinct"]);
+      return (pct != null && pct !== "") ? String(parseInt(pct, 10)) : null;
+    },
+    // hover popup: name the commanding officer from the prefetched roster
+    // (same nypd-precinct-info.json join the card makes, keyed by precinct).
+    hoverOfficial: {
+      load: loadPrecinctInfo,
+      name: function (feature, roster) {
+        if (!roster) return null;
+        var pct = findPropCI(feature.properties || {}, ["precinct"]);
+        var num = (pct != null && pct !== "") ? parseInt(pct, 10) : null;
+        var row = num != null ? roster[String(num)] : null;
+        return row ? (row.commander || row.commanderName) : null;
+      }
+    },
     overlay: {
       load: loadPolicePrecincts,
       style: { color: "#7A0A1C", weight: 1.5, fillColor: "#C8102E", fillOpacity: 0.06, dashArray: "2 6" }
@@ -3356,6 +3380,11 @@
   var loadCecMembers = makeCached(function () { return fetchJSONWithRetry("data/app/cec-members.json", {}, 2); });
   registerLayer({
     id: "cec", group: "schools", label: "Community Education Council",
+    // hover popup: same "CEC n" identity the card's headline row shows.
+    hoverName: function (feature) {
+      var d = intField(findPropCI(feature.properties || {}, ["schooldist"]));
+      return d != null ? "CEC " + d : null;
+    },
     overlay: { load: loadSchoolDistricts, style: { color: "#7048E8", weight: 2, fillColor: "#7048E8", fillOpacity: 0.05, dashArray: "6 3" } },
     query: function (point, seq) {
       return Promise.all([loadSchoolDistricts(), loadCecMembers().catch(function () { return {}; })]).then(function (r) {
@@ -3438,6 +3467,21 @@
   var loadCouncilMembers = makeCached(function () { return fetchJSONWithRetry("data/app/council-members.json", {}, 2); });
   registerLayer({
     id: "council", group: "political", label: "City Council District",
+    // hover popup: same `coundist` property the card's query reads.
+    hoverName: function (feature) {
+      return intField(findPropCI(feature.properties || {}, ["coundist"]));
+    },
+    // hover popup: name the council member from the prefetched roster
+    // (same council-members.json join the card makes, keyed by district).
+    hoverOfficial: {
+      load: loadCouncilMembers,
+      name: function (feature, roster) {
+        if (!roster) return null;
+        var d = intField(findPropCI(feature.properties || {}, ["coundist"]));
+        var row = d != null ? roster[d] : null;
+        return row ? row.name : null;
+      }
+    },
     overlay: { load: loadCouncilDistricts, style: { color: "#5B2A86", weight: 2, fillColor: "#7048E8", fillOpacity: 0.06 } },
     query: function (point, seq) {
       return Promise.all([loadCouncilDistricts(), loadCouncilMembers().catch(function () { return {}; })]).then(function (r) {
@@ -3500,6 +3544,23 @@
   }
   registerLayer({
     id: "community-district", group: "political", label: "Community District / Board",
+    // hover popup: same decoded "Borough CD n" identity the card headline shows.
+    hoverName: function (feature) {
+      var dec = decodeBoroCd(findPropCI(feature.properties || {}, ["boro_cd"]));
+      return dec ? ((dec.boro ? dec.boro + " " : "") + "CD " + dec.cd) : null;
+    },
+    // hover popup: name the board chair from the prefetched CB roster (same
+    // ruf7-3wgc join the card makes). "(Chair)" is kept so the name never
+    // reads as an elected district representative — the board is appointed.
+    hoverOfficial: {
+      load: loadCommunityBoardInfo,
+      name: function (feature, roster) {
+        if (!roster) return null;
+        var dec = decodeBoroCd(findPropCI(feature.properties || {}, ["boro_cd"]));
+        var row = (dec && dec.boro) ? communityBoardIndex(roster)[dec.boro + "|" + dec.cd] : null;
+        return (row && row.cb_chair) ? String(row.cb_chair) + " (Chair)" : null;
+      }
+    },
     overlay: { load: loadCommunityDistricts, style: { color: "#B5179E", weight: 2, fillColor: "#F72585", fillOpacity: 0.05, dashArray: "5 3" } },
     query: function (point, seq) {
       return Promise.all([loadCommunityDistricts(), loadCommunityBoardInfo().catch(function () { return []; })]).then(function (r) {
@@ -3652,6 +3713,23 @@
   function registerBoroughOfficeLayer(opts) {
     registerLayer({
       id: opts.id, group: "political", label: opts.label,
+      // hover popup: the borough is the district identity here (same headline
+      // the card shows) …
+      hoverName: function (feature) {
+        var boro = findPropCI(feature.properties || {}, ["boroname"]);
+        return boro ? String(boro) : null;
+      },
+      // … and the officeholder comes from the prefetched borough-officials
+      // roster (empty placeholder until the §11.3 operator step → name omitted).
+      hoverOfficial: {
+        load: loadBoroughOfficials,
+        name: function (feature, roster) {
+          if (!roster) return null;
+          var boro = findPropCI(feature.properties || {}, ["boroname"]);
+          var row = boro ? roster[boro] : null;
+          return (row && row[opts.role]) ? row[opts.role].name : null;
+        }
+      },
       overlay: { load: loadBoroughBoundaries, style: opts.style },
       query: function (point, seq) {
         return Promise.all([loadBoroughBoundaries(), loadBoroughOfficials().catch(function () { return {}; })]).then(function (r) {
@@ -3762,6 +3840,15 @@
       id: opts.id,
       group: "schools",
       label: opts.label,
+      // hover popup: same identity the card headline shows — the zoned school's
+      // name when the feature carries a DBN, or the honest "None" for the
+      // choice-based catchments the query below treats as unzoned.
+      hoverName: function (feature) {
+        var props = feature.properties || {};
+        if (!findPropCI(props, ["dbn", "school_id", "schoolid"])) return "None";
+        var name = findPropCI(props, ["label", "sch_name", "short_name", "school_name", "schoolname", "name"]);
+        return name ? String(name) : null;
+      },
       overlay: { load: loadZones, style: opts.style },
       query: function (point, seq) {
         return loadZones().then(function (geojson) {
@@ -3967,6 +4054,11 @@
       id: opts.id,
       group: "political",
       label: opts.label,
+      // hover popup: same district extraction the card's query uses (chamber-
+      // specific TIGERweb fields + the name-field regex fallback).
+      hoverName: function (feature) {
+        return extractDistrictNumber(feature.properties || {}, opts.districtFields);
+      },
       overlay: { load: loadChamber, style: opts.style },
       query: function (point, seq) {
         return Promise.all([
@@ -4058,25 +4150,28 @@
   // tooltip. {modId, label, address, latlng, color, layerLabel} | null.
   var hoveredPoi = null;
 
-  // Broad district-number key list spanning every polygon layer's own naming,
-  // fed through extractDistrictNumber (which adds a name-field regex fallback
-  // for the layers whose number only lives inside a "…name" string).
+  // FALLBACK district-number key list, fed through extractDistrictNumber (which
+  // adds a name-field regex fallback for layers whose number only lives inside
+  // a "…name" string). Every polygon layer now declares its own hoverName —
+  // sourced from the same properties its click card reads — so this generic
+  // path only runs if a layer's hoverName comes back empty. Keys deliberately
+  // exclude the encoded fields that need decoding before display (boro_cd,
+  // electdist): showing them raw would misread.
   var HOVER_NUMBER_KEYS = [
-    "ward", "ward_num", "ward_number", "ward_id",
     "district", "dist_num", "dist", "district_number", "district_no",
-    "area_numbe", "area_num_1", "area_number", "community_area_number", "area_num",
-    "beat_num", "beat", "beat_number", "beat_no",
-    "zip", "zip_code", "zipcode", "zcta5ce10",
+    "coundist", "schooldist", "precinct", "firebn",
+    "modzcta", "zip", "zip_code", "zipcode",
     "number"
   ];
 
   // Name-ish property keys that read better than a bare district number when a
-  // feature carries one — deliberately narrow (community-area + school names).
-  // The generic "name"/"dist_label"/"longname" fields are excluded on purpose:
-  // for the legislative TIGER layers those are just "Congressional District 7",
-  // which duplicates the number this pairs with.
+  // feature carries one — deliberately narrow (neighborhood/borough + school
+  // names). The generic "name"/"label"/"longname" fields are excluded on
+  // purpose: for the legislative TIGER layers those are just "Congressional
+  // District 7" (duplicating the number this pairs with), and the school-zone
+  // "label" can be a district placeholder rather than a school.
   var HOVER_NAME_KEYS = [
-    "community", "community_area_name", "commarea", "comarea",
+    "ntaname", "boroname", "borough",
     "short_name", "school_nam", "school_nm", "school_name", "schoolname", "sch_name"
   ];
 
