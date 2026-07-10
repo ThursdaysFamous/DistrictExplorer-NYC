@@ -40,7 +40,10 @@ def resolve(records, chamber):
         prev = by_district.get(key)
         # prefer an incumbent; otherwise keep the first seen
         if prev is None or (r.get("incumbent") and not prev.get("_incumbent")):
-            by_district[key] = {"name": name, "party": r.get("party"), "_incumbent": bool(r.get("incumbent"))}
+            entry = {"name": name, "party": r.get("party"), "_incumbent": bool(r.get("incumbent"))}
+            if r.get("districtOffice"):
+                entry["districtOffice"] = r["districtOffice"]
+            by_district[key] = entry
     for v in by_district.values():
         v.pop("_incumbent", None)
     return by_district

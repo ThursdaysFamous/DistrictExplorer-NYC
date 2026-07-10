@@ -17,6 +17,7 @@ Usage:
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -24,6 +25,59 @@ import urllib.request
 
 API = "https://legislation.nysenate.gov/api/3/members/{year}?full=true&limit=1000&key={key}"
 DEFAULT_OUT = os.path.join(os.path.dirname(__file__), ".cache", "ny_legislature_raw.json")
+
+
+def openstates_offices():
+    """{(CHAMBER, district:int): [office lines]} from the Open States v3 API.
+
+    Uses `include=offices` and the member's district (`current_role.district`),
+    preferring the district office over the capitol one. Returns {} if
+    OPENSTATES_API_KEY is unset or anything goes wrong — the caller then ships
+    names-only (an address is never guessed).
+    """
+    key = os.environ.get("OPENSTATES_API_KEY")
+    if not key:
+        return {}
+    out = {}
+    CH = {"upper": "SENATE", "lower": "ASSEMBLY"}
+    try:
+        for org, chamber in CH.items():
+            page = 1
+            while page <= 10:  # NY: senate ~2 pp, assembly ~3 pp at per_page=50
+                url = ("https://v3.openstates.org/people?jurisdiction=New%20York"
+                       "&org_classification=" + org + "&include=offices&per_page=50&page=" + str(page))
+                req = urllib.request.Request(url, headers={"X-API-KEY": key, "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    payload = json.load(r)
+                for person in payload.get("results", []):
+                    role = person.get("current_role") or {}
+                    d = role.get("district")
+                    if d is None:
+                        continue
+                    try:
+                        dnum = int(str(d).strip())
+                    except ValueError:
+                        continue
+                    offs = person.get("offices") or []
+                    chosen = next((o for o in offs if o.get("classification") == "district" and o.get("address")), None) \
+                        or next((o for o in offs if o.get("address")), None)
+                    if not chosen:
+                        continue
+                    lines = [p.strip() for p in re.split(r"[;\n]+", chosen.get("address", "")) if p.strip()]
+                    if chosen.get("voice"):
+                        lines.append("Phone: " + chosen["voice"])
+                    if lines:
+                        out[(chamber, dnum)] = lines
+                pag = payload.get("pagination") or {}
+                if page >= (pag.get("max_page") or page):
+                    break
+                page += 1
+                time.sleep(6)  # Open States free tier is rate-limited (~10/min)
+    except Exception as e:  # noqa: BLE001 — enrichment is best-effort, never fatal
+        print("Open States office enrichment skipped: %s" % e, file=sys.stderr)
+        return {}
+    print("Open States: office addresses for %d districts" % len(out), file=sys.stderr)
+    return out
 
 
 def main():
@@ -52,18 +106,30 @@ def main():
     scraped_at = os.environ.get("SCRAPED_AT") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     source_url = "https://legislation.nysenate.gov/api/3/members/%s" % year
 
+    # Optional district-office enrichment from the Open States v3 API (structured
+    # offices; nysenate.gov / nyassembly.gov are WAF/JS-blocked). Needs a free
+    # OPENSTATES_API_KEY (§11); absent or on any error we ship names-only, never
+    # guessing an address.
+    offices = openstates_offices()
+
     records = []
     for m in items:
         person = m.get("person") or {}
-        records.append({
-            "chamber": m.get("chamber"),          # "SENATE" | "ASSEMBLY"
-            "district": m.get("districtCode"),
+        chamber = m.get("chamber")
+        district = m.get("districtCode")
+        rec = {
+            "chamber": chamber,                     # "SENATE" | "ASSEMBLY"
+            "district": district,
             "name": m.get("fullName") or person.get("fullName"),
             "incumbent": bool(m.get("incumbent")),
             "party": None,                          # not exposed by this endpoint — never guessed
             "source_url": source_url,
             "scraped_at": scraped_at,
-        })
+        }
+        office = offices.get((chamber, int(district))) if district is not None else None
+        if office:
+            rec["districtOffice"] = office
+        records.append(rec)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:
