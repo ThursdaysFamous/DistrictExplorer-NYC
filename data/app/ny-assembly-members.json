@@ -1,602 +1,1202 @@
 {
 "1": {
 "name": "Tommy Schiavoni",
-"party": null
+"party": null,
+"districtOffice": [
+"3350 Noyac Road Building B, Suite 1, Sag Harbor, NY 11963",
+"Phone: 631-537-2583"
+]
 },
 "2": {
 "name": "Jodi Giglio",
-"party": null
+"party": null,
+"districtOffice": [
+"30 W. Main St. Suite 103, Riverhead, NY 11901",
+"Phone: 631-727-0204"
+]
 },
 "3": {
 "name": "Joe DeStefano",
-"party": null
+"party": null,
+"districtOffice": [
+"3245 Route 112 Building 2, Suite 6, Medford, NY 11763",
+"Phone: 631-207-0073"
+]
 },
 "4": {
 "name": "Rebecca Kassay",
-"party": null
+"party": null,
+"districtOffice": [
+"149 Main St., East Setauket, NY 11733",
+"Phone: 631-751-3094"
+]
 },
 "5": {
 "name": "Doug Smith",
-"party": null
+"party": null,
+"districtOffice": [
+"4155 Veterans Memorial Highway Suite 9, Ronkonkoma, NY 11779",
+"Phone: 631-585-0230"
+]
 },
 "6": {
 "name": "Philip Ramos",
-"party": null
+"party": null,
+"districtOffice": [
+"1010 Suffolk Ave., Brentwood, NY 11717",
+"Phone: 631-435-3214"
+]
 },
 "7": {
 "name": "Jerett Gandolfo",
-"party": null
+"party": null,
+"districtOffice": [
+"859 Montauk Highway Suite 1, Bayport, NY 11705",
+"Phone: 631-589-0348"
+]
 },
 "8": {
 "name": "Michael J. Fitzpatrick",
-"party": null
+"party": null,
+"districtOffice": [
+"285 Middle Country Road Suite 202, Smithtown, NY 11787",
+"Phone: 631-724-2929"
+]
 },
 "9": {
 "name": "Michael Durso",
-"party": null
+"party": null,
+"districtOffice": [
+"512 Park Blvd., Massapequa Park, NY 11762",
+"Phone: 516-541-4598"
+]
 },
 "10": {
 "name": "Steve Stern",
-"party": null
+"party": null,
+"districtOffice": [
+"95 Broad Hollow Road Suite 100, Melville, NY 11747",
+"Phone: 631-271-8025"
+]
 },
 "11": {
 "name": "Kwani O'Pharrow",
-"party": null
+"party": null,
+"districtOffice": [
+"640 W. Montauk Highway, Lindenhurst, NY 11757",
+"Phone: 631-957-2087"
+]
 },
 "12": {
 "name": "Keith Brown",
-"party": null
+"party": null,
+"districtOffice": [
+"6080 Jericho Turnpike Suite 310, Commack, NY 11725",
+"Phone: 631-261-4151"
+]
 },
 "13": {
 "name": "Charles Lavine",
-"party": null
+"party": null,
+"districtOffice": [
+"1 School St. Suite 303-B, Glen Cove, NY 11542",
+"Phone: 516-676-0050"
+]
 },
 "14": {
 "name": "David McDonough",
-"party": null
+"party": null,
+"districtOffice": [
+"404 Bedford Ave., Bellmore, NY 11710",
+"Phone: 516-409-2070"
+]
 },
 "15": {
 "name": "Jake Ryan Blumencranz",
-"party": null
+"party": null,
+"districtOffice": [
+"111 W. Old Country Road Suite 202, Hicksville, NY 11801",
+"Phone: 516-937-3571"
+]
 },
 "16": {
 "name": "Daniel Norber",
-"party": null
+"party": null,
+"districtOffice": [
+"44 S. Bayles Ave. Suite 200, Port Washington, NY 11050",
+"Phone: 516-482-6966"
+]
 },
 "17": {
 "name": "John K. Mikulin",
-"party": null
+"party": null,
+"districtOffice": [
+"747 N. Broadway Suite L, Massapequa, NY 11758",
+"Phone: 516-228-4960"
+]
 },
 "18": {
 "name": "Noah Burroughs",
-"party": null
+"party": null,
+"districtOffice": [
+"33 Front St. Suites 302 & 303, Hempstead, NY 11550",
+"Phone: 516-489-6610"
+]
 },
 "19": {
 "name": "Edward Ra",
-"party": null
+"party": null,
+"districtOffice": [
+"825 E. Gate Blvd. Suite 207, Garden City, NY 11530",
+"Phone: 516-535-4095"
+]
 },
 "20": {
 "name": "Eric Brown",
-"party": null
+"party": null,
+"districtOffice": [
+"525 Chestnut St. Suite 212, Cedarhurst, NY 11516",
+"Phone: 516-431-0500"
+]
 },
 "21": {
 "name": "Judy Griffin",
-"party": null
+"party": null,
+"districtOffice": [
+"74 N. Village Ave., Rockville Centre, NY 11570",
+"Phone: 516-561-8216"
+]
 },
 "22": {
 "name": "Michaelle C. Solages",
-"party": null
+"party": null,
+"districtOffice": [
+"33 N. Central Ave., Valley Stream, NY 11580",
+"Phone: 516-599-2972"
+]
 },
 "23": {
 "name": "Stacey Pheffer Amato",
-"party": null
+"party": null,
+"districtOffice": [
+"9516 Rockaway Beach Blvd., Rockaway Beach, NY 11693",
+"Phone: 718-945-9550"
+]
 },
 "24": {
 "name": "David Weprin",
-"party": null
+"party": null,
+"districtOffice": [
+"185-06 Union Turnpike, Fresh Meadows, NY 11366",
+"Phone: 718-454-3027"
+]
 },
 "25": {
 "name": "Nily Rozic",
-"party": null
+"party": null,
+"districtOffice": [
+"159-16 Union Turnpike, Flushing, NY 11366",
+"Phone: 718-820-0241"
+]
 },
 "26": {
 "name": "Edward Braunstein",
-"party": null
+"party": null,
+"districtOffice": [
+"213-33 39th Ave., Suite 238, Bayside, NY 11361",
+"Phone: 718-357-3588"
+]
 },
 "27": {
 "name": "Sam Berger",
-"party": null
+"party": null,
+"districtOffice": [
+"159-06 71st Ave., Flushing, NY 11365",
+"Phone: 718-969-1508"
+]
 },
 "28": {
 "name": "Andrew Hevesi",
-"party": null
+"party": null,
+"districtOffice": [
+"70-50 Austin St. Suite 114, Forest Hills, NY 11375",
+"Phone: 718-263-5595"
+]
 },
 "29": {
 "name": "Alicia Hyndman",
-"party": null
+"party": null,
+"districtOffice": [
+"232-06A Merrick Blvd., Springfield Gardens, NY 11413",
+"Phone: 718-723-5412"
+]
 },
 "30": {
 "name": "Steven Raga",
-"party": null
+"party": null,
+"districtOffice": [
+"60-14 Queens Blvd. Cellar, Woodside, NY 11377",
+"Phone: 718-651-3185"
+]
 },
 "31": {
 "name": "Khaleel Anderson",
-"party": null
+"party": null,
+"districtOffice": [
+"131-15 Rockaway Blvd. 1st Floor, South Ozone Park, NY 11420",
+"Phone: 718-322-4958"
+]
 },
 "32": {
 "name": "Vivian Cook",
-"party": null
+"party": null,
+"districtOffice": [
+"142-15 Rockaway Blvd, Jamaica, NY 11436",
+"Phone: 718-322-3975"
+]
 },
 "33": {
 "name": "Clyde Vanel",
-"party": null
+"party": null,
+"districtOffice": [
+"97-01 Springfield Blvd., Queens Village, NY 11429",
+"Phone: 718-479-2333"
+]
 },
 "34": {
 "name": "Jessica Gonzalez-Rojas",
-"party": null
+"party": null,
+"districtOffice": [
+"75-35 31st Ave. Suite 206B (2nd Floor), East Elmhurst, NY 11370",
+"Phone: 718-457-0384"
+]
 },
 "35": {
 "name": "Larinda Hooks",
-"party": null
+"party": null,
+"districtOffice": [
+"98-09 Northern Blvd., Corona, NY 11368",
+"Phone: 718-457-3615"
+]
 },
 "36": {
 "name": "Diana Moreno",
-"party": null
+"party": null,
+"districtOffice": [
+"24-08 32nd St. Suite 1002A, Astoria, NY 11102",
+"Phone: 718-545-3889"
+]
 },
 "37": {
 "name": "Claire Valdez",
-"party": null
+"party": null,
+"districtOffice": [
+"45-10 Skillman Ave. 1st Floor, Sunnyside, NY 11104",
+"Phone: 718-784-3194"
+]
 },
 "38": {
 "name": "Jenifer Rajkumar",
-"party": null
+"party": null,
+"districtOffice": [
+"83-91 Woodhaven Blvd., Woodhaven, NY 11421",
+"Phone: 718-805-0950"
+]
 },
 "39": {
 "name": "Catalina Cruz",
-"party": null
+"party": null,
+"districtOffice": [
+"41-40 Junction Blvd., Corona, NY 11368",
+"Phone: 718-458-5367"
+]
 },
 "40": {
 "name": "Ron Kim",
-"party": null
+"party": null,
+"districtOffice": [
+"136-20 38th Ave. Suite 10A, Flushing, NY 11354",
+"Phone: 718-939-0195"
+]
 },
 "41": {
 "name": "Kalman Yeger",
-"party": null
+"party": null,
+"districtOffice": [
+"3520 Nostrand Ave., Brooklyn, NY 11229",
+"Phone: 718-648-4700"
+]
 },
 "42": {
 "name": "Rodneyse Bichotte Hermelyn",
-"party": null
+"party": null,
+"districtOffice": [
+"1312 Flatbush Ave., Brooklyn, NY 11210",
+"Phone: 718-940-0428"
+]
 },
 "43": {
 "name": "Brian Cunningham",
-"party": null
+"party": null,
+"districtOffice": [
+"249 Empire Blvd., Brooklyn, NY 11225",
+"Phone: 718-771-3105"
+]
 },
 "44": {
 "name": "Robert C. Carroll",
-"party": null
+"party": null,
+"districtOffice": [
+"416 7th Ave., Brooklyn, NY 11215",
+"Phone: 718-788-7221"
+]
 },
 "45": {
 "name": "Michael Novakhov",
-"party": null
+"party": null,
+"districtOffice": [
+"1800 Sheepshead Bay Road, Brooklyn, NY 11235",
+"Phone: 718-743-4078"
+]
 },
 "46": {
 "name": "Alec Brook-Krasny",
-"party": null
+"party": null,
+"districtOffice": [
+"2002 Mermaid Ave., Brooklyn, NY 11224",
+"Phone: 718-266-0267"
+]
 },
 "47": {
 "name": "William Colton",
-"party": null
+"party": null,
+"districtOffice": [
+"155 Kings Highway, Brooklyn, NY 11223",
+"Phone: 718-236-1598"
+]
 },
 "48": {
 "name": "Simcha Eichenstein",
-"party": null
+"party": null,
+"districtOffice": [
+"1310 48th St. Unit 204, Brooklyn, NY 11219",
+"Phone: 718-853-9616"
+]
 },
 "49": {
 "name": "Lester Chang",
-"party": null
+"party": null,
+"districtOffice": [
+"6904 Fort Hamilton Parkway, Brooklyn, NY 11228",
+"Phone: 718-236-1764"
+]
 },
 "50": {
 "name": "Emily Gallagher",
-"party": null
+"party": null,
+"districtOffice": [
+"61 Greenpoint Ave. #213, Brooklyn, NY 11222",
+"Phone: 718-383-7474"
+]
 },
 "51": {
 "name": "Marcela Mitaynes",
-"party": null
+"party": null,
+"districtOffice": [
+"4907 4th Ave. Suite 1A, Brooklyn, NY 11220",
+"Phone: 718-492-6334"
+]
 },
 "52": {
 "name": "Jo Anne Simon",
-"party": null
+"party": null,
+"districtOffice": [
+"341 Smith St., Brooklyn, NY 11231",
+"Phone: 718-246-4889"
+]
 },
 "53": {
 "name": "Maritza Davila",
-"party": null
+"party": null,
+"districtOffice": [
+"673 Hart St. Unit C2, Brooklyn, NY 11237",
+"Phone: 718-443-1205"
+]
 },
 "54": {
 "name": "Erik Dilan",
-"party": null
+"party": null,
+"districtOffice": [
+"366 Cornelia St., Brooklyn, NY 11237",
+"Phone: 718-386-4576"
+]
 },
 "55": {
 "name": "Latrice Walker",
-"party": null
+"party": null,
+"districtOffice": [
+"400 Rockaway Ave. 2nd Floor, Brooklyn, NY 11212",
+"Phone: 718-342-1256"
+]
 },
 "56": {
 "name": "Stefani Zinerman",
-"party": null
+"party": null,
+"districtOffice": [
+"1368 Fulton St. 3rd Floor, NW, Brooklyn, NY 11216",
+"Phone: 718-399-7630"
+]
 },
 "57": {
 "name": "Phara Souffrant Forrest",
-"party": null
+"party": null,
+"districtOffice": [
+"55 Hanson Place, Brooklyn, NY 11217",
+"Phone: 718-596-0100"
+]
 },
 "58": {
 "name": "Monique Chandler-Waterman",
-"party": null
+"party": null,
+"districtOffice": [
+"903 Utica Ave., Brooklyn, NY 11203",
+"Phone: 718-385-3336"
+]
 },
 "59": {
 "name": "Jaime R. Williams",
-"party": null
+"party": null,
+"districtOffice": [
+"5318 N Ave. 1st Floor Store, Brooklyn, NY 11234",
+"Phone: 718-252-2124"
+]
 },
 "60": {
 "name": "Nikki Lucas",
-"party": null
+"party": null,
+"districtOffice": [
+"425 New Lots Ave. First Floor, Brooklyn, NY 11207",
+"Phone: 718-257-5824"
+]
 },
 "61": {
 "name": "Charles Fall",
-"party": null
+"party": null,
+"districtOffice": [
+"250 Broadway 22nd Floor Suite 2203, New York, NY 10007",
+"Phone: 718-442-9932"
+]
 },
 "62": {
 "name": "Mike Reilly",
-"party": null
+"party": null,
+"districtOffice": [
+"7001 Amboy Road Suite 202 E, Staten Island, NY 10307",
+"Phone: 718-967-5194"
+]
 },
 "63": {
 "name": "Samuel Pirozzolo",
-"party": null
+"party": null,
+"districtOffice": [
+"2090 Victory Blvd., Staten Island, NY 10314",
+"Phone: 718-370-1384"
+]
 },
 "64": {
 "name": "Michael Tannousis",
-"party": null
+"party": null,
+"districtOffice": [
+"11 Maplewood Place, Staten Island, NY 10306",
+"Phone: 718-987-0197"
+]
 },
 "65": {
 "name": "Grace Lee",
-"party": null
+"party": null,
+"districtOffice": [
+"250 Broadway Suite 2232, New York, NY 10007",
+"Phone: 212-312-1420"
+]
 },
 "66": {
 "name": "Deborah Glick",
-"party": null
+"party": null,
+"districtOffice": [
+"853 Broadway Suite 2007, New York, NY 10003",
+"Phone: 212-674-5153"
+]
 },
 "67": {
 "name": "Linda Rosenthal",
-"party": null
+"party": null,
+"districtOffice": [
+"230 W. 72nd St. Suite 2F, New York, NY 10023",
+"Phone: 212-873-6368"
+]
 },
 "68": {
 "name": "Eddie Gibbs",
-"party": null
+"party": null,
+"districtOffice": [
+"55 E. 115th St. Ground Level, New York, NY 10029",
+"Phone: 212-828-3953"
+]
 },
 "69": {
 "name": "Micah Lasher",
-"party": null
+"party": null,
+"districtOffice": [
+"245 W. 104th St., New York, NY 10025",
+"Phone: 212-866-3970"
+]
 },
 "70": {
 "name": "Jordan Wright",
-"party": null
+"party": null,
+"districtOffice": [
+"163 W. 125th St. Suite 911, New York, NY 10027",
+"Phone: 212-866-5809"
+]
 },
 "71": {
 "name": "Al Taylor",
-"party": null
+"party": null,
+"districtOffice": [
+"2541-55 Adam Clayton Powell Jr. Blvd., New York, NY 10039",
+"Phone: 212-234-1430"
+]
 },
 "72": {
 "name": "Manny De Los Santos",
-"party": null
+"party": null,
+"districtOffice": [
+"210 Sherman Ave. Suite A&C, New York, NY 10034",
+"Phone: 212-544-2278"
+]
 },
 "73": {
 "name": "Alex Bores",
-"party": null
+"party": null,
+"districtOffice": [
+"353 Lexington Ave, Suite 704, New York, NY 10016",
+"Phone: 212-605-0937"
+]
 },
 "74": {
 "name": "Keith Powers",
-"party": null
+"party": null,
+"districtOffice": [
+"107 and 109 Avenue B, New York, NY 10009",
+"Phone: 212-979-9696"
+]
 },
 "75": {
 "name": "Tony Simone",
-"party": null
+"party": null,
+"districtOffice": [
+"214 W. 29th St. Suite 1401, New York, NY 10001",
+"Phone: 212-807-7900"
+]
 },
 "76": {
 "name": "Rebecca Seawright",
-"party": null
+"party": null,
+"districtOffice": [
+"1485 York Ave., New York, NY 10075",
+"Phone: 212-288-4607"
+]
 },
 "77": {
 "name": "Landon C. Dais",
-"party": null
+"party": null,
+"districtOffice": [
+"910 Grand Concourse Suite 1JK, Bronx, NY 10451",
+"Phone: 718-538-2000"
+]
 },
 "78": {
 "name": "George Alvarez",
-"party": null
+"party": null,
+"districtOffice": [
+"2633 Webster Ave. 1st Floor, Bronx, NY 10458",
+"Phone: 718-933-2204"
+]
 },
 "79": {
 "name": "Chantel Jackson",
-"party": null
+"party": null,
+"districtOffice": [
+"780 Concourse Village West Ground Floor Professional, Bronx, NY 10451",
+"Phone: 718-538-3829"
+]
 },
 "80": {
 "name": "John Zaccaro Jr.",
-"party": null
+"party": null,
+"districtOffice": [
+"2018 Williamsbridge Road, Bronx, NY 10461",
+"Phone: 718-409-0109"
+]
 },
 "81": {
 "name": "Jeffrey Dinowitz",
-"party": null
+"party": null,
+"districtOffice": [
+"3107 Kingsbridge Ave., Bronx, NY 10463",
+"Phone: 718-796-5345"
+]
 },
 "82": {
 "name": "Michael Benedetto",
-"party": null
+"party": null,
+"districtOffice": [
+"3602 E. Tremont Ave. Suite 201, Bronx, NY 10465",
+"Phone: 718-892-2235"
+]
 },
 "83": {
 "name": "Carl Heastie",
-"party": null
+"party": null,
+"districtOffice": [
+"1446 E. Gun Hill Road, Bronx, NY 10469",
+"Phone: 718-654-6539"
+]
 },
 "84": {
 "name": "Amanda Septimo",
-"party": null
+"party": null,
+"districtOffice": [
+"505 Brook Ave., Bronx, NY 10455",
+"Phone: 718-292-2901"
+]
 },
 "85": {
 "name": "Emerita Torres",
-"party": null
+"party": null,
+"districtOffice": [
+"1231 Lafayette Ave. Suite L-620, Bronx, NY 10474",
+"Phone: 718-893-0202"
+]
 },
 "86": {
 "name": "Yudelka Tapia",
-"party": null
+"party": null,
+"districtOffice": [
+"2175C Jerome Ave., Bronx, NY 10453",
+"Phone: 718-933-6909"
+]
 },
 "87": {
 "name": "Karines Reyes",
-"party": null
+"party": null,
+"districtOffice": [
+"1973 Westchester Ave., Bronx, NY 10462",
+"Phone: 718-931-2620"
+]
 },
 "88": {
 "name": "Amy Paulin",
-"party": null
+"party": null,
+"districtOffice": [
+"700 White Plains Road Suite 355, Scarsdale, NY 10583",
+"Phone: 914-723-1115"
+]
 },
 "89": {
 "name": "J. Gary Pretlow",
-"party": null
+"party": null,
+"districtOffice": [
+"6 Gramatan Ave. Suite 201, Mt. Vernon, NY 10550",
+"Phone: 914-667-0127"
+]
 },
 "90": {
 "name": "Nader Sayegh",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 406B, 35 E. Grassy Sprain Road, Yonkers, NY 10710",
+"Phone: 914-779-8805"
+]
 },
 "91": {
 "name": "Steven Otis",
-"party": null
+"party": null,
+"districtOffice": [
+"222 Grace Church St., Port Chester, NY 10573",
+"Phone: 914-939-7028"
+]
 },
 "92": {
 "name": "MaryJane Shimsky",
-"party": null
+"party": null,
+"districtOffice": [
+"303 S. Broadway Suite 229, Tarrytown, NY 10591",
+"Phone: 914-631-1605"
+]
 },
 "93": {
 "name": "Chris Burdick",
-"party": null
+"party": null,
+"districtOffice": [
+"333 S. Bedford Road Suite 131, Mount Kisco, NY 10549",
+"Phone: 914-244-4450"
+]
 },
 "94": {
 "name": "Matthew Slater",
-"party": null
+"party": null,
+"districtOffice": [
+"3 Starr Ridge Road Suite 204, Brewster, NY 10509",
+"Phone: 845-278-2923"
+]
 },
 "95": {
 "name": "Dana Levenberg",
-"party": null
+"party": null,
+"districtOffice": [
+"8 Revolutionary Road, Ossining, NY 10562",
+"Phone: 914-941-1111"
+]
 },
 "96": {
 "name": "Patrick J. Carroll",
-"party": null
+"party": null,
+"districtOffice": [
+"151 N. Main St. Suite 204, New City, NY 10956",
+"Phone: 845-634-9791"
+]
 },
 "97": {
 "name": "Aron Wieder",
-"party": null
+"party": null,
+"districtOffice": [
+"33 Downtown Drive Suite 400J, Monsey, NY 10952",
+"Phone: 845-425-1734"
+]
 },
 "98": {
 "name": "Karl Brabenec",
-"party": null
+"party": null,
+"districtOffice": [
+"28 N. Main St. Suite 2, Florida, NY 10921",
+"Phone: 845-544-7551"
+]
 },
 "99": {
 "name": "Christopher Eachus",
-"party": null
+"party": null,
+"districtOffice": [
+"615 Route 32 Suite 4, Highland Mills, NY 10930",
+"Phone: 845-469-6929"
+]
 },
 "100": {
 "name": "Paula Kay",
-"party": null
+"party": null,
+"districtOffice": [
+"461 Broadway, Monticello, NY 12701",
+"Phone: 845-794-5807"
+]
 },
 "101": {
 "name": "Brian Maher",
-"party": null
+"party": null,
+"districtOffice": [
+"74 W. Main St., Walden, NY 12586",
+"Phone: 845-379-5001"
+]
 },
 "102": {
 "name": "Chris Tague",
-"party": null
+"party": null,
+"districtOffice": [
+"113 Park Place Suite 6, Schoharie, NY 12157",
+"Phone: 518-295-7250"
+]
 },
 "103": {
 "name": "Sarahana Shrestha",
-"party": null
+"party": null,
+"districtOffice": [
+"324 Washington Ave. Suite 1, Kingston, NY 12401",
+"Phone: 845-338-9610"
+]
 },
 "104": {
 "name": "Jonathan Jacobson",
-"party": null
+"party": null,
+"districtOffice": [
+"436 Robinson Ave. Suite B, Newburgh, NY 12550",
+"Phone: 845-562-0888"
+]
 },
 "105": {
 "name": "Anil Beephan Jr.",
-"party": null
+"party": null,
+"districtOffice": [
+"North Hopewell Plaza 1075 Route 82, Suite 1, Hopewell Junction, NY 12533",
+"Phone: 845-221-2202"
+]
 },
 "106": {
 "name": "Didi Barrett",
-"party": null
+"party": null,
+"districtOffice": [
+"12 Raymond Ave. Suite 105, Poughkeepsie, NY 12603",
+"Phone: 845-454-1703"
+]
 },
 "107": {
 "name": "Scott H. Bendett",
-"party": null
+"party": null,
+"districtOffice": [
+"1580 Columbia Turnpike Building 4, Suite 1A, Castleton-on-Hudson, NY 12033",
+"Phone: 518-272-6149"
+]
 },
 "108": {
 "name": "John T. McDonald III",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 625, Legislative Office Building, Albany, NY 12248",
+"Phone: 518-455-4474"
+]
 },
 "109": {
 "name": "Gabriella Romero",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 704, Legislative Office Building, Albany, NY 12248",
+"Phone: 518-455-4178"
+]
 },
 "110": {
 "name": "Phil Steck",
-"party": null
+"party": null,
+"districtOffice": [
+"1609 Union St., Schenectady, NY 12309",
+"Phone: 518-377-0902"
+]
 },
 "111": {
 "name": "Angelo Santabarbara",
-"party": null
+"party": null,
+"districtOffice": [
+"433 State St., Schenectady, NY 12305",
+"Phone: 518-382-2941"
+]
 },
 "112": {
 "name": "Mary Beth Walsh",
-"party": null
+"party": null,
+"districtOffice": [
+"199 Milton Ave. Suite 2, Ballston Spa, NY 12020",
+"Phone: 518-884-8010"
+]
 },
 "113": {
 "name": "Carrie Woerner",
-"party": null
+"party": null,
+"districtOffice": [
+"112 Spring St. Suite 205, Saratoga Springs, NY 12866",
+"Phone: 518-584-5493"
+]
 },
 "114": {
 "name": "Matthew Simpson",
-"party": null
+"party": null,
+"districtOffice": [
+"4 Southwestern Ave. Suite 3, Queensbury, NY 12804",
+"Phone: 518-792-4546"
+]
 },
 "115": {
 "name": "Michael Cashman",
-"party": null
+"party": null,
+"districtOffice": [
+"202 U.S. Oval, Plattsburgh, NY 12903",
+"Phone: 518-562-1986"
+]
 },
 "116": {
 "name": "Scott Gray",
-"party": null
+"party": null,
+"districtOffice": [
+"3 Remington Ave., Canton, NY 13617",
+"Phone: 315-386-2037"
+]
 },
 "117": {
 "name": "Kenneth Blankenbush",
-"party": null
+"party": null,
+"districtOffice": [
+"40 Franklin St. Suite 2, Carthage, NY 13619",
+"Phone: 315-493-3909"
+]
 },
 "118": {
 "name": "Robert Smullen",
-"party": null
+"party": null,
+"districtOffice": [
+"5659 State Route 5 Suites 1-3, Herkimer, NY 13350",
+"Phone: 315-866-1632"
+]
 },
 "119": {
 "name": "Marianne Buttenschon",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 401, 207 Genesee St., Utica, NY 13501",
+"Phone: 315-732-1055"
+]
 },
 "120": {
 "name": "William A. Barclay",
-"party": null
+"party": null,
+"districtOffice": [
+"19 Canalview Mall, Fulton, NY 13069",
+"Phone: 315-598-5185"
+]
 },
 "121": {
 "name": "Joe Angelino",
-"party": null
+"party": null,
+"districtOffice": [
+"1 Kattelville Road Suite 1, Binghamton, NY 13901",
+"Phone: 607-648-6080"
+]
 },
 "122": {
 "name": "Brian D. Miller",
-"party": null
+"party": null,
+"districtOffice": [
+"48 Genesee St., New Hartford, NY 13413",
+"Phone: 315-736-3879"
+]
 },
 "123": {
 "name": "Donna Lupardo",
-"party": null
+"party": null,
+"districtOffice": [
+"State Office Building, 17th Floor 44 Hawley St., Binghamton, NY 13901",
+"Phone: 607-723-9047"
+]
 },
 "124": {
 "name": "Christopher Friend",
-"party": null
+"party": null,
+"districtOffice": [
+"1250 Schweizer Road, Horseheads, NY 14845",
+"Phone: 607-562-3602"
+]
 },
 "125": {
 "name": "Anna Kelles",
-"party": null
+"party": null,
+"districtOffice": [
+"130 E. State St., Ithaca, NY 14850",
+"Phone: 607-277-8030"
+]
 },
 "126": {
 "name": "John Lemondes",
-"party": null
+"party": null,
+"districtOffice": [
+"69 South St., Auburn, NY 13021",
+"Phone: 315-255-3045"
+]
 },
 "127": {
 "name": "Albert A. Stirpe",
-"party": null
+"party": null,
+"districtOffice": [
+"7293 Buckley Road Suite 201, North Syracuse, NY 13212",
+"Phone: 315-452-1115"
+]
 },
 "128": {
 "name": "Pamela J. Hunter",
-"party": null
+"party": null,
+"districtOffice": [
+"711 E. Genesee St. 2nd Floor, Syracuse, NY 13210",
+"Phone: 315-449-9536"
+]
 },
 "129": {
 "name": "William Magnarelli",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 840, 333 E. Washington St., Syracuse, NY 13202",
+"Phone: 315-428-9651"
+]
 },
 "130": {
 "name": "Brian Manktelow",
-"party": null
+"party": null,
+"districtOffice": [
+"10 Leach Road, Lyons, NY 14489",
+"Phone: 315-946-5166"
+]
 },
 "131": {
 "name": "Jeff Gallahan",
-"party": null
+"party": null,
+"districtOffice": [
+"70 Elizabeth Blackwell St., Geneva, NY 14456",
+"Phone: 315-781-2030"
+]
 },
 "132": {
 "name": "Philip Palmesano",
-"party": null
+"party": null,
+"districtOffice": [
+"105 E. Steuben St., Bath, NY 14810",
+"Phone: 607-776-9691"
+]
 },
 "133": {
 "name": "Andrea Bailey",
-"party": null
+"party": null,
+"districtOffice": [
+"79 Genesee St., Avon, NY 14414",
+"Phone: 585-218-0038"
+]
 },
 "134": {
 "name": "Josh Jensen",
-"party": null
+"party": null,
+"districtOffice": [
+"2496 W. Ridge Road, Rochester, NY 14626",
+"Phone: 585-225-4190"
+]
 },
 "135": {
 "name": "Jen Lunsford",
-"party": null
+"party": null,
+"districtOffice": [
+"317 Main St. Suite 2032, East Rochester, NY 14445",
+"Phone: 585-223-9130"
+]
 },
 "136": {
 "name": "Sarah Clark",
-"party": null
+"party": null,
+"districtOffice": [
+"500 Helendale Road Suite 90, Rochester, NY 14609",
+"Phone: 585-467-0410"
+]
 },
 "137": {
 "name": "Demond Meeks",
-"party": null
+"party": null,
+"districtOffice": [
+"614 W. Main St. Apartments 1-4, Rochester, NY 14611",
+"Phone: 585-454-3670"
+]
 },
 "138": {
 "name": "Harry B. Bronson",
-"party": null
+"party": null,
+"districtOffice": [
+"840 University Ave., Rochester, NY 14607",
+"Phone: 585-244-5255"
+]
 },
 "139": {
 "name": "Stephen Hawley",
-"party": null
+"party": null,
+"districtOffice": [
+"121 N. Main St. Suite 100, Albion, NY 14411",
+"Phone: 585-589-5780"
+]
 },
 "140": {
 "name": "William Conrad",
-"party": null
+"party": null,
+"districtOffice": [
+"34 Peuquet Parkway, Tonawanda, NY 14150",
+"Phone: 716-873-2540"
+]
 },
 "141": {
 "name": "Crystal Peoples-Stokes",
-"party": null
+"party": null,
+"districtOffice": [
+"Room 107, 425 Michigan Ave., Buffalo, NY 14203",
+"Phone: 716-897-9714"
+]
 },
 "142": {
 "name": "Patrick Burke",
-"party": null
+"party": null,
+"districtOffice": [
+"225 Louisiana St., Buffalo, NY 14204",
+"Phone: 716-608-6099"
+]
 },
 "143": {
 "name": "Patrick Chludzinski",
-"party": null
+"party": null,
+"districtOffice": [
+"2562 Walden Ave. Suite 102, Cheektowaga, NY 14225",
+"Phone: 716-686-0080"
+]
 },
 "144": {
 "name": "Paula Bologna",
-"party": null
+"party": null,
+"districtOffice": [
+"8180 Main St., Clarence, NY 14221",
+"Phone: 716-839-4691"
+]
 },
 "145": {
 "name": "Angelo J. Morinello",
-"party": null
+"party": null,
+"districtOffice": [
+"800 Main St. Suite 2C, Niagara Falls, NY 14301",
+"Phone: 716-282-6062"
+]
 },
 "146": {
 "name": "Karen McMahon",
-"party": null
+"party": null,
+"districtOffice": [
+"5500 Main St. Suite 224, Williamsville, NY 14221",
+"Phone: 716-634-1895"
+]
 },
 "147": {
 "name": "David DiPietro",
-"party": null
+"party": null,
+"districtOffice": [
+"411 Main St., East Aurora, NY 14052",
+"Phone: 716-655-0951"
+]
 },
 "148": {
 "name": "Joseph Sempolinski",
-"party": null
+"party": null,
+"districtOffice": [
+"700 W. State St., Olean, NY 14760",
+"Phone: 716-373-7103"
+]
 },
 "149": {
 "name": "Jonathan Rivera",
-"party": null
+"party": null,
+"districtOffice": [
+"40 Main St., Hamburg, NY 14075",
+"Phone: 716-985-7001"
+]
 },
 "150": {
 "name": "Andrew Molitor",
-"party": null
+"party": null,
+"districtOffice": [
+"Fenton Building 2 E. 2nd St., Suite 320, Jamestown, NY 14701",
+"Phone: 716-664-7773"
+]
 }
 }
