@@ -10,7 +10,7 @@
 // GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
 // refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
 // data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v3";
+const CACHE_NAME = "nyc-district-explorer-shell-v4";
 
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
@@ -43,6 +43,7 @@ const GEOMETRY_URLS = [
 // until the Thread 5 scrape lands; more roster files join as later threads land.
 const ROSTER_URLS = [
   "./data/app/nypd-precinct-info.json",
+  "./data/app/cec-members.json",
 ];
 
 const PRECACHE_URLS = SHELL_URLS.concat(GEOMETRY_URLS);

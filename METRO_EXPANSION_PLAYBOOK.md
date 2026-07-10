@@ -353,3 +353,17 @@ Five safety layers registered (`EXPECT_LAYERS = 10`). Verified headless at City 
 Gates: `smoke_test.mjs` EXPECT_LAYERS=10 (safety layers are live-API, not asserted as CI ground truth); `sw.js` `ROSTER_URLS` += `nypd-precinct-info.json`, `CACHE_NAME` → `…-shell-v3`; `validate_index.py` EXPECT_LAYER_IDS += the 5 safety ids, ROSTER_FILES += `nypd-precinct-info.json` (min 0).
 
 _Next: Thread 3 — Schools (ES/MS/HS attendance zones with honest choice-based empty states, community school district, CEC placeholder, school-site nearest-3). School-zone dataset IDs rotate yearly — add the freshness chore._
+
+### Thread 3 — Schools — DONE (2026-07-10)
+
+Six schools layers registered (`EXPECT_LAYERS = 16`). Verified headless at Park Slope / Brooklyn (CSD 15) — zoned ES + honest choice-based empty states for MS/HS; screenshot. Smoke (16 checks) + `validate_index.py` + the new freshness check all pass.
+
+- `es-zone` / `ms-zone` / `hs-zone` DONE — Socrata `cmjf-yawu` / `t26j-jbq7` / `ruu9-egea` via the generalized `registerSchoolZone` factory. `schoolProfileHtml` re-pointed off Chicago's cps.edu to **MySchools** (`/en/schools/<dbn>/`, verified 200). Honest empty states: the factory keys "is there a zoned school" on the **DBN** (MS/HS choice catchments carry a district placeholder label like `"D15"` with a null DBN), so a choice-based area renders opts.emptyNote instead of a bogus school. Park Slope → ES "P.S. 321", MS/HS "None — choice-based / by application".
+- `school-district` DONE — Socrata `8ugf-3d8u` (32) via `registerPolygonLayer`. Superintendent link-only (appointed by the Chancellor, not elected). `schooldist` arrives as a float string (`"15.0"`) — normalized to `"15"` in the loader (`intField`).
+- `cec` DONE — shares the `school-district` geometry; `data/app/cec-members.json` ships **empty placeholder** until the Thread 5 Playwright scrape (schools.nyc.gov WAF-blocks plain clients). Card carries the "parent-elected council — not a school board (NYC has mayoral control)" one-liner (§7).
+- `school-site` DONE — NYSED ArcGIS `NYS_Schools` layers 2/3/4 (public 1591 / private 809 / charter 431), 5-county filter, `outSR=4326`. Public exceeds the 1000-row transfer cap → added a **paged** ArcGIS loader (§5.5). `registerNearestPointLayer` across the merged, type-tagged points.
+- SURPRISE — the zone datasets are **"School Zones 2024-2025"**, last touched 2024-03 (~28 months). The playbook's ">14-month `rowsUpdatedAt`" heuristic would cry wolf on this genuinely-current data (NYC leaves zones untouched for 2+ years), so the freshness chore was **refined**: it now flags a 404 **or** a *newer school-year zones dataset appearing in the catalog* (per level), which is the real "time to swap the id" signal. Catalog confirms 2024-2025 is the latest → check passes; it will fire when 2025-2026 lands.
+
+Freshness chore added (§9): `scripts/check_school_zone_ids.py` + `.github/workflows/check-school-zone-ids.yml` (monthly; opens a deduped tracking **issue**, never a PR). Gates: `smoke_test.mjs` EXPECT_LAYERS=16; `sw.js` `ROSTER_URLS` += `cec-members.json`, `CACHE_NAME` → `…-shell-v4`; `validate_index.py` += the 6 school ids + `cec-members.json` (min 0).
+
+_Next: Thread 4 — Political (10 layers: council, election-district `subOf` assembly, community district/board live join, congress, state senate/assembly, judicial already done, borough-president, DA). Heaviest thread; operator supplies `borough-officials.json`. The NY Senate roster can use the Open Legislation key (Thread 5)._

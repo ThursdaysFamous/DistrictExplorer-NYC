@@ -1786,6 +1786,8 @@
     "borough",            // 5 counties — largest
     "judicial-district",  // same 5 county polygons, relabeled; drawn just above borough
     "municipal-court",    // 28 Civil Court districts
+    "school-district",    // 32 community school districts
+    "cec",                // same 32 districts, relabeled; drawn just after school-district
     "fire-battalion",     // 49 FDNY battalions
     // sector (303) sits just BEFORE its parent precinct so the precinct outline
     // frames the sector fills (same rule as Chicago's police beats)
@@ -1793,6 +1795,10 @@
     "police-precinct",    // 78 NYPD precincts
     "zip-code",           // ~178 MODZCTA
     "neighborhood",       // ~262 NTAs
+    "hs-zone",            // high-school zones (sparse)
+    "ms-zone",            // middle-school zones (partial)
+    "es-zone",            // elementary zones — smallest polygon layer
+    "school-site",        // point marker — always topmost
     "police-station",     // point marker — always topmost
     "fire-station"        // point marker — always topmost
   ];
@@ -2882,6 +2888,14 @@
   function toTitleCase(s) {
     return String(s).toLowerCase().replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); });
   }
+  // Normalize a numeric-ish field to its integer string ("15.0" -> "15"); passes
+  // non-numeric values through and null/"" to null. (Socrata sometimes serves
+  // integer district numbers as floats.)
+  function intField(v) {
+    if (v == null || v === "") return null;
+    var n = parseInt(v, 10);
+    return isNaN(n) ? v : String(n);
+  }
   // Ordinal for the NYPD per-precinct page slug (1 -> "1st", 13 -> "13th").
   function ordinalSuffix(n) {
     n = parseInt(n, 10);
@@ -3137,6 +3151,139 @@
 
 
   /* =========================================================================
+   * THREAD 3 — SCHOOLS (METRO_EXPANSION_PLAYBOOK §7 rows 9–14)
+   * ES/MS/HS attendance zones (MS partial, HS sparse — honest choice-based
+   * empty states), Community School District, Community Education Council
+   * (parent-elected — the honest analog to an elected school board, which NYC
+   * lacks under mayoral control), and School sites (nearest 3; public/charter/
+   * private from NYSED). School-zone dataset IDs rotate each school year — see
+   * scripts/check_school_zone_ids.py + the monthly freshness workflow.
+   * (registerSchoolZone / registerNearestPointLayer factories are hoisted.)
+   * ======================================================================= */
+
+  var MYSCHOOLS_LINK = '<a href="https://www.myschools.nyc/" target="_blank" rel="noopener">MySchools</a>';
+
+  registerSchoolZone({
+    id: "es-zone", label: "Elementary School Zone", datasetId: "cmjf-yawu",
+    style: { color: "#2E7D5B", weight: 1.5, fillColor: "#7CC49B", fillOpacity: 0.12 },
+    emptyNote: "No zoned elementary school found for this point.",
+    moreHtml: MYSCHOOLS_LINK
+  });
+  registerSchoolZone({
+    id: "ms-zone", label: "Middle School Zone", datasetId: "t26j-jbq7",
+    style: { color: "#1F6F5C", weight: 1.5, fillColor: "#5FB49C", fillOpacity: 0.12, dashArray: "5 3" },
+    emptyNote: "No zoned middle school here — much of NYC middle-school admission is choice-based.",
+    moreHtml: MYSCHOOLS_LINK
+  });
+  registerSchoolZone({
+    id: "hs-zone", label: "High School Zone", datasetId: "ruu9-egea",
+    style: { color: "#155C4B", weight: 1.5, fillColor: "#4CA98F", fillOpacity: 0.12, dashArray: "2 4" },
+    emptyNote: "Most NYC high schools admit by application citywide, not by zone.",
+    moreHtml: MYSCHOOLS_LINK
+  });
+
+  /* ---------- Community School District (32) — Socrata 8ugf-3d8u ----------
+   * Superintendents are appointed by the Chancellor (not elected), so the card
+   * links to the DOE directory rather than naming an officeholder. D75/D79 are
+   * citywide with no polygon and are not mappable. */
+  var loadSchoolDistricts = makeCached(function () {
+    return loadSocrataGeoJSON("8ugf-3d8u").then(function (gj) {
+      // schooldist arrives as a float string ("15.0"); normalize to "15" so the
+      // card (and the CEC join) read cleanly.
+      (gj.features || []).forEach(function (f) {
+        var p = f.properties || {};
+        if (p.schooldist != null) p.schooldist = intField(p.schooldist);
+      });
+      return gj;
+    });
+  });
+  registerPolygonLayer({
+    id: "school-district", group: "schools", label: "Community School District",
+    loader: loadSchoolDistricts,
+    style: { color: "#0B7285", weight: 2, fillColor: "#0B7285", fillOpacity: 0.05 },
+    fields: [
+      { name: "district", label: "Community School District", keys: ["schooldist"], primary: true },
+      { label: "Superintendent", value: "Appointed by the Chancellor (not elected)." },
+      { label: "Directory", html: '<a href="https://www.schools.nyc.gov/about-us/leadership/superintendents" target="_blank" rel="noopener">DOE superintendents</a>' }
+    ]
+  });
+
+  /* ---------- Community Education Council (CEC) — parent-elected ----------
+   * Shares the community-school-district geometry (one CEC per district). NYC
+   * has no elected school board (mayoral control); the CEC is the honest
+   * parent-elected analog, and this card says so and never calls itself a
+   * school board. Members ship as an empty placeholder until the Thread 5
+   * Playwright scrape (schools.nyc.gov WAF-blocks plain clients). */
+  var loadCecMembers = makeCached(function () { return fetchJSONWithRetry("data/app/cec-members.json", {}, 2); });
+  registerLayer({
+    id: "cec", group: "schools", label: "Community Education Council",
+    overlay: { load: loadSchoolDistricts, style: { color: "#7048E8", weight: 2, fillColor: "#7048E8", fillOpacity: 0.05, dashArray: "6 3" } },
+    query: function (point, seq) {
+      return Promise.all([loadSchoolDistricts(), loadCecMembers().catch(function () { return {}; })]).then(function (r) {
+        var gj = r[0], roster = r[1] || {};
+        var feature = findFeatureContaining(gj, point);
+        if (!feature) return null;
+        var d = findPropCI(feature.properties || {}, ["schooldist"]);
+        var num = (d != null && d !== "") ? parseInt(d, 10) : null;
+        var row = num != null ? roster[String(num)] : null;
+        return { seq: seq, district: num, members: (row && row.members) ? row.members : [] };
+      });
+    },
+    render: function (result) {
+      var fields = [{ label: "Council", value: result.district != null ? ("CEC " + result.district) : "Unknown" }];
+      fields.push({ label: "What it is", value: "The parent-elected council for this community school district — NYC's elected parent body (not a school board; the city has mayoral control)." });
+      var names = (result.members || []).filter(function (m) { return m && m.name; }).map(function (m) { return String(m.name); });
+      if (names.length) fields.push({ label: "Members", value: names.join(", ") });
+      fields.push({ label: "Council page", html: '<a href="https://www.schools.nyc.gov/get-involved/families/community-education-council" target="_blank" rel="noopener">Community Education Councils</a>' });
+      return renderFieldList(fields);
+    }
+  });
+
+  /* ---------- School (nearest 3; public / charter / private) — NYSED ArcGIS ----------
+   * Points from the state's NYS_Schools FeatureServer, 5-NYC-county filter,
+   * outSR=4326 (native geometry is UTM 18N). Public (1591) exceeds the 1000-row
+   * transfer cap, so it pages; private (809) and charter (431) fit in one call. */
+  var NYSED_BASE = "https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/arcgis/rest/services/NYS_Schools/FeatureServer/";
+  var NYC_SCHOOL_WHERE = "COUNTY_DESC IN ('BRONX','KINGS','NEW YORK','QUEENS','RICHMOND')";
+  function loadNysedLayerPaged(layerIndex, tagType) {
+    var PAGE = 1000, fields = "LEGAL_NAME,PHYSADDRLINE1,PHYSCITY,PHYSZIPCD5";
+    function page(offset, acc) {
+      var url = NYSED_BASE + layerIndex + "/query?where=" + encodeURIComponent(NYC_SCHOOL_WHERE) +
+        "&outFields=" + encodeURIComponent(fields) + "&outSR=4326&f=geojson&resultRecordCount=" + PAGE + "&resultOffset=" + offset;
+      return fetchJSONWithRetry(url, { timeoutMs: REMOTE_GEOJSON_TIMEOUT_MS }, 2).then(function (gj) {
+        var feats = (gj && gj.features) || [];
+        feats.forEach(function (f) { (f.properties = f.properties || {}).school_type = tagType; });
+        acc = acc.concat(feats);
+        var more = gj && (gj.exceededTransferLimit || (gj.properties && gj.properties.exceededTransferLimit));
+        if (more && feats.length === PAGE) return page(offset + feats.length, acc);
+        return acc;
+      });
+    }
+    return page(0, []);
+  }
+  var loadSchoolSites = makeCached(function () {
+    return Promise.all([loadNysedLayerPaged(2, "Public"), loadNysedLayerPaged(3, "Private"), loadNysedLayerPaged(4, "Charter")])
+      .then(function (rs) {
+        var feats = [];
+        rs.forEach(function (a) { feats = feats.concat(a); });
+        return { type: "FeatureCollection", features: feats };
+      });
+  });
+  registerNearestPointLayer({
+    id: "school-site", group: "schools", label: "School",
+    color: "#2E7D5B", fill: "#7CC49B",
+    loader: loadSchoolSites,
+    intro: "Nearest schools (public, charter, private), straight-line distance:",
+    line: function (p) {
+      var name = findPropCI(p, ["legal_name"]);
+      var type = findPropCI(p, ["school_type"]);
+      var addr = findPropCI(p, ["physaddrline1"]);
+      return (name ? toTitleCase(name) : "School") + (type ? " [" + type + "]" : "") + (addr ? " — " + toTitleCase(addr) : "");
+    }
+  });
+
+
+  /* =========================================================================
    * GEO UTILITIES — nearest-N proximity (haversine) + representative points
    * for point datasets (police/fire stations, school sites) that resolve by
    * straight-line distance instead of point-in-polygon.
@@ -3191,15 +3338,21 @@
    * generalized off Chicago's cps.edu when the NYC school zones are built.
    * ======================================================================= */
 
-  /* ---------- builds a sanitized cps.edu school-profile link, or null if no id ---------- */
-  function schoolProfileHtml(schoolId) {
-    if (!schoolId) return null;
-    var url = "https://www.cps.edu/schools/schoolprofiles/" + encodeURIComponent(String(schoolId));
-    return '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">School profile</a>';
+  // NYC school-profile link, built from a DBN (e.g. "20K503") — MySchools is the
+  // DOE's own directory (§2: this URL builder is the city-specific part of the
+  // school-zone factory). Verified live: /en/schools/<dbn>/ returns 200.
+  function schoolProfileHtml(dbn) {
+    if (!dbn) return null;
+    var url = "https://www.myschools.nyc/en/schools/" + encodeURIComponent(String(dbn)) + "/";
+    return '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">MySchools profile</a>';
   }
 
+  // Attendance-zone factory. NYC's zone datasets carry `dbn` + `label` (school)
+  // and `schooldist`; MS/HS catchments legitimately have NO zoned school
+  // (choice-based admission), so a click that lands in an unzoned catchment — or
+  // a feature with a null school — renders opts.emptyNote honestly instead of a
+  // blank "No result". opts: { id, label, datasetId, style, emptyNote?, moreHtml? }.
   function registerSchoolZone(opts) {
-    // opts: id, label, datasetId, style
     var loadZones = makeCachedLoader(opts.datasetId);
     registerLayer({
       id: opts.id,
@@ -3209,26 +3362,33 @@
       query: function (point, seq) {
         return loadZones().then(function (geojson) {
           var feature = findFeatureContaining(geojson, point);
-          if (!feature) return null;
-          var props = feature.properties || {};
-          var name = findPropCI(props, ["short_name", "school_nam", "school_nm", "school_name", "schoolname", "sch_name", "name"]);
-          var schoolId = findPropCI(props, ["school_id", "sch_id", "schoolid", "school_ids"]);
-          var grades = findPropCI(props, ["boundarygr", "grade_range", "gradelevel"]);
-          var address = findPropCI(props, ["school_add", "address", "location_address"]);
-          return { seq: seq, name: name, schoolId: schoolId, grades: grades, address: address };
+          var props = feature ? (feature.properties || {}) : null;
+          var name = props && findPropCI(props, ["label", "sch_name", "short_name", "school_name", "schoolname", "name"]);
+          var schoolId = props && findPropCI(props, ["dbn", "school_id", "schoolid"]);
+          var district = intField(props && findPropCI(props, ["schooldist", "zoned_dist"]));
+          // The DBN is the reliable "is there a zoned school" signal: MS/HS
+          // choice catchments carry a district placeholder label (e.g. "D15")
+          // with a null DBN — treat those (and points outside every zone) as no
+          // zoned school so the honest choice-based note renders.
+          if (!schoolId) {
+            return opts.emptyNote ? { seq: seq, none: true, district: district } : null;
+          }
+          return { seq: seq, name: name, schoolId: schoolId, district: district };
         });
       },
       render: function (result) {
-        var fields = [{ label: "School", value: result.name ? String(result.name) : "Unknown" }];
-        if (result.grades) fields.push({ label: "Grades", value: String(result.grades) });
-        if (result.address) fields.push({ label: "Address", value: String(result.address), pin: opts.style.color });
+        if (result.none) {
+          var f = [{ label: "Zoned school", value: "None" }];
+          if (result.district) f.push({ label: "School district", value: String(result.district) });
+          f.push({ label: "Why", value: opts.emptyNote });
+          if (opts.moreHtml) f.push({ label: "Apply", html: opts.moreHtml });
+          return renderFieldList(f);
+        }
+        var fields = [{ label: "Zoned school", value: result.name ? String(result.name) : "Unknown" }];
+        if (result.district) fields.push({ label: "School district", value: String(result.district) });
         var profileHtml = schoolProfileHtml(result.schoolId);
         if (profileHtml) fields.push({ label: "Profile", html: profileHtml });
         return renderFieldList(fields);
-      },
-      pointOfInterest: function (result) {
-        if (!result.address) return null;
-        return { label: result.name ? String(result.name) : "School", address: String(result.address) };
       }
     });
   }

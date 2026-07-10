@@ -45,6 +45,7 @@ MIN_REGISTER_LAYER = 5
 EXPECT_LAYER_IDS = [
     "neighborhood", "zip-code", "borough", "judicial-district", "municipal-court",
     "police-precinct", "police-sector", "police-station", "fire-station", "fire-battalion",
+    "es-zone", "ms-zone", "hs-zone", "school-district", "cec", "school-site",
 ]
 
 # file -> (min features, max features) for the offline-anchor boundary layers
@@ -60,6 +61,7 @@ GEOMETRY_FILES = {
 # object (min 0). The floor is raised once the scrape lands.
 ROSTER_FILES = {
     "nypd-precinct-info.json": 0,
+    "cec-members.json": 0,
 }
 
 
