@@ -290,4 +290,18 @@ Identical to `BUILD_PLAYBOOK_1.md` §5. Start of a thread: paste Part I §2 (con
 
 ## Status
 
-_(append handoff notes here as the NYC fork's threads complete)_
+### Thread 0 — Fork & re-core — DONE (2026-07-10)
+
+- `engine` DONE — forked from `DistrictExplorer-CHI`; re-cored to the metro-agnostic engine + one stub layer. Boots on an NYC map; verified headless (Playwright) at New York City Hall `40.71274,-74.00602` — `window.NycExplorer` exported, 1 layer registered, stub card renders, tile-failure banner degrades honestly. `scripts/smoke_test.mjs` (4 checks) passes.
+- `stub` STUB — single placeholder layer (`id: "stub"`, group `geography`). No network: empty overlay FeatureCollection, `query()` echoes the picked coordinate, `render()` links the playbook. `EXPECT_LAYERS=1`. Deleted when Thread 1's real geography layers land.
+- Core constants swapped (§1): `NYC_BBOX` `[-74.27,40.48,-73.68,40.93]` / `NYC_CENTER` `[40.7128,-74.0060]` (minZoom 10); permalink gate `lat 40.4–41.05, lng -74.3–-73.6`; geolocation + map/search strings; Socrata host → `data.cityofnewyork.us`; TIGERweb `STATE='36'`; verified date `July 10, 2026`; debug namespace `window.NycExplorer` (twinned in `smoke_test.mjs`); preconnect/dns-prefetch hosts. `GROUPS` unchanged. `LAYER_AREA_RANK = ["stub"]` (full §7 rank filled in Threads 1–6).
+- Geocoders swapped (§6a): type-ahead → GeoSearch `/v2/autocomplete`; POI → GeoSearch `/v2/search` (both keyless, NYC-scoped, no viewbox). Nominatim retained only as documented fallback.
+- Socrata app-token wiring added (§6b): `SOCRATA_APP_TOKEN` top-of-file constant (empty) + `withAppToken()` no-op until the operator registers a token; applied to both Socrata loaders. **Manual step (§11.1) still pending.**
+- Branding: title/meta/manifest/theme-color, NYC flag palette (`--nyc-blue #2A6EBB`, `--nyc-blue-deep #12305C`, `--nyc-orange #FF6319`), favicon = NYC flag bands, footer sources, feedback subject. **Chicago six-pointed star replaced with a map-pin motif** (masthead + selection marker). `icons/*.png` are still the Chicago placeholders — **operator to replace (§11.2).**
+- `CNAME` set to placeholder `nycdistricts.com` — **operator must own/confirm before deploying to `main` (§11.2).**
+- `sw.js` re-cored to shell-only (`CACHE_NAME` → `nyc-district-explorer-shell-v1`); `GEOMETRY_URLS`/`ROSTER_URLS` emptied (refilled Threads 1/5). Orphaned Chicago `data/` removed — no Chicago rosters ship in the NYC app.
+- `engine` SURPRISE — the four reusable factories (`registerPolygonLayer` / `registerSchoolZone` / `registerCpsNetwork` / `registerIlgaChamber`) and the shared Socrata/ArcGIS/TIGERweb loaders are interleaved with the deleted module registration calls, not contiguous; the re-core deletes only the 22 `registerXxx({…})` call blocks and their Chicago preamble, preserving the factories. `index.html` 211 KB → 150 KB.
+
+**Carried over as templates, still Chicago, deferred by design:** `scripts/*.py` scraper/builder pairs (→ Thread 5, §9), the 4 Chicago roster-update workflows in `.github/workflows/` (they fail safe at the `validate_index.py` gate — `MIN_REGISTER_LAYER` no longer met — so no bad PR is opened; replaced in Thread 5), `scripts/validate_index.py` (re-derived in Thread 6, §8), factory doc-comments that still cite Chicago datasets. Generic infra kept as-is: `build_embedded_boundaries.py`, `vendor_leaflet.sh`, `deploy-pages.yml`, `smoke-test.yml`, `docs/BUILD_PLAYBOOK_1.md`, `docs/OPTIMIZATION_PLAYBOOK.md`.
+
+_Next: Thread 1 — offline anchors + geography (borough / judicial-district / municipal-court static files; neighborhood; zip-code). Pin the smoke-test ground truth and set `EXPECT_LAYERS` accordingly._
