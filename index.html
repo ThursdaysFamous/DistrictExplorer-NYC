@@ -818,6 +818,41 @@
   }
   .nyc-poi-pin { background: none; border: none; }
 
+  /* ---- selection marker as a borough seal: once the selected point resolves
+     to one of the five boroughs, the plain teardrop is swapped for that
+     borough's official seal in a round white badge with a small pointer tail
+     aimed at the exact spot (see boroughSealIcon). background:none clears
+     Leaflet's default divIcon chrome. ---- */
+  .nyc-borough-marker { background: none; border: none; }
+  .nyc-borough-pin {
+    position: relative;
+    width: 48px;
+    height: 58px;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+  }
+  .nyc-borough-pin img {
+    display: block;
+    width: 44px;
+    height: 44px;
+    margin: 0 2px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #ffffff;
+    box-sizing: border-box;
+  }
+  /* the tail: a white triangle centered under the badge, its tip the anchor */
+  .nyc-borough-pin-tail {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 12px solid #ffffff;
+  }
+
   /* ---- hover explorer: a live popup that follows the cursor and names the
      district under it (largest active layer). pointer-events:none is load-
      bearing — the popup sits directly under the cursor, so if it captured
@@ -1070,6 +1105,70 @@
     iconSize: [30, 40],
     iconAnchor: [15, 38]
   });
+
+  /* ---------- borough-seal selection marker ----------
+   * Once a selected point resolves to one of the five boroughs, the plain
+   * teardrop above is replaced by that borough's official seal in a round white
+   * badge. boroname (from data/app/borough-boundaries.json) maps to the seal
+   * folder slug; the actual swap happens async in applyBoroughMarker (below
+   * setSelectedPoint) so map feedback is instant and the badge upgrades in once
+   * the offline borough geometry is cached. Points that match no borough are NYC
+   * waterways — they get the NYC Ferry logo instead (see loadWaterFerryIcon). */
+  var BOROUGH_SEAL_SLUG = {
+    "Manhattan": "manhattan",
+    "Bronx": "bronx",
+    "Brooklyn": "brooklyn",
+    "Queens": "queens",
+    "Staten Island": "staten-island"
+  };
+  // Build the round-badge divIcon (circular art + white ring + pointer tail)
+  // shared by every borough seal and the water ferry logo.
+  function sealPinIcon(url) {
+    return L.divIcon({
+      className: "nyc-borough-marker",
+      html: '<div class="nyc-borough-pin">' +
+            '<img src="' + url + '" alt="" width="44" height="44">' +
+            '<span class="nyc-borough-pin-tail"></span>' +
+            "</div>",
+      iconSize: [48, 58],
+      iconAnchor: [24, 56]
+    });
+  }
+  var boroughIconCache = {};
+  function boroughSealIcon(slug) {
+    if (!boroughIconCache[slug]) {
+      boroughIconCache[slug] = sealPinIcon("icons/boroughs/" + slug + "/seal-96.png");
+    }
+    return boroughIconCache[slug];
+  }
+
+  /* ---------- water marker: NYC Ferry logo ----------
+   * A click that matches no borough is on the water. Show the NYC Ferry logo
+   * there. The logo is preloaded and only swapped in once it actually loads, so
+   * if the asset is missing the marker cleanly stays the default teardrop rather
+   * than rendering a broken image. Result is cached after the first probe. */
+  var WATER_FERRY_URL = "icons/app/ferry.png";
+  var waterFerryIcon = null;   // built once the image is confirmed loadable
+  var waterFerryState = 0;     // 0 = unprobed, 1 = loaded, 2 = missing/failed
+  var waterFerryWaiters = [];
+  function loadWaterFerryIcon(cb) {
+    if (waterFerryState === 1) return cb(waterFerryIcon);
+    if (waterFerryState === 2) return cb(null);
+    waterFerryWaiters.push(cb);
+    if (waterFerryWaiters.length > 1) return; // a probe is already in flight
+    function flush(v) {
+      var w = waterFerryWaiters; waterFerryWaiters = [];
+      for (var i = 0; i < w.length; i++) w[i](v);
+    }
+    var probe = new Image();
+    probe.onload = function () {
+      waterFerryState = 1;
+      waterFerryIcon = sealPinIcon(WATER_FERRY_URL);
+      flush(waterFerryIcon);
+    };
+    probe.onerror = function () { waterFerryState = 2; flush(null); };
+    probe.src = WATER_FERRY_URL;
+  }
 
   /* ---------- sanitize: escape any external string before it touches innerHTML ---------- */
   function sanitize(str) {
@@ -1376,6 +1475,7 @@
     if (selectedMarker) map.removeLayer(selectedMarker);
     selectedMarker = L.marker([lat, lng], { icon: starDivIcon, alt: "Selected point" }).addTo(map);
     if (!opts.skipPan) map.setView([lat, lng], Math.max(map.getZoom(), 15));
+    applyBoroughMarker(lat, lng, state.sequence);
 
     pointChip.hidden = false;
     pointChip.innerHTML = "";
@@ -1407,6 +1507,32 @@
 
     runAllActiveLayerQueries();
     syncUrlHash();
+  }
+
+  /* Swap the teardrop marker for the borough seal once the point resolves to a
+   * borough, or the NYC Ferry logo when it resolves to none (water). Reuses the
+   * shared cached borough-boundary loader and pointInGeometry test, so no extra
+   * fetch. Stale-async guarded by seq; a boundary-load failure silently keeps
+   * the default teardrop. */
+  function applyBoroughMarker(lat, lng, seq) {
+    if (typeof loadBoroughBoundaries !== "function") return;
+    loadBoroughBoundaries().then(function (geo) {
+      if (seq !== state.sequence || !selectedMarker) return;
+      var feats = (geo && geo.features) || [];
+      var pt = { lat: lat, lng: lng };
+      for (var i = 0; i < feats.length; i++) {
+        if (pointInGeometry(pt, feats[i].geometry)) {
+          var name = feats[i].properties && feats[i].properties.boroname;
+          var slug = BOROUGH_SEAL_SLUG[name];
+          if (slug) selectedMarker.setIcon(boroughSealIcon(slug));
+          return;
+        }
+      }
+      // no borough matched — the point is on NYC water: use the ferry logo
+      loadWaterFerryIcon(function (icon) {
+        if (icon && seq === state.sequence && selectedMarker) selectedMarker.setIcon(icon);
+      });
+    }).catch(function () { /* keep the default teardrop marker */ });
   }
 
   /* =========================================================================

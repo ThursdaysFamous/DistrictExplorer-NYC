@@ -10,7 +10,7 @@
 // GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
 // refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
 // data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v4";
+const CACHE_NAME = "nyc-district-explorer-shell-v5";
 
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
@@ -21,8 +21,8 @@ const CACHE_NAME = "nyc-district-explorer-shell-v4";
 const SHELL_URLS = [
   "./",
   "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
+  "./icons/app/icon-192.png",
+  "./icons/app/icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
 ];
