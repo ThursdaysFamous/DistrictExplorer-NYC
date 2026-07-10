@@ -46,6 +46,8 @@ EXPECT_LAYER_IDS = [
     "neighborhood", "zip-code", "borough", "judicial-district", "municipal-court",
     "police-precinct", "police-sector", "police-station", "fire-station", "fire-battalion",
     "es-zone", "ms-zone", "hs-zone", "school-district", "cec", "school-site",
+    "council", "community-district", "congress", "state-senate", "state-assembly",
+    "election-district", "borough-president", "district-attorney",
 ]
 
 # file -> (min features, max features) for the offline-anchor boundary layers
@@ -62,6 +64,13 @@ GEOMETRY_FILES = {
 ROSTER_FILES = {
     "nypd-precinct-info.json": 0,
     "cec-members.json": 0,
+    # Congress ships a real roster (26 NY U.S. House reps from congress-legislators);
+    # the rest are empty placeholders until their Thread 5 scrapes.
+    "congress-roster.json": 26,
+    "council-members.json": 0,
+    "ny-senate-members.json": 0,
+    "ny-assembly-members.json": 0,
+    "borough-officials.json": 0,
 }
 
 

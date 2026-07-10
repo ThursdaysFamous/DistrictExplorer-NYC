@@ -367,3 +367,19 @@ Six schools layers registered (`EXPECT_LAYERS = 16`). Verified headless at Park 
 Freshness chore added (§9): `scripts/check_school_zone_ids.py` + `.github/workflows/check-school-zone-ids.yml` (monthly; opens a deduped tracking **issue**, never a PR). Gates: `smoke_test.mjs` EXPECT_LAYERS=16; `sw.js` `ROSTER_URLS` += `cec-members.json`, `CACHE_NAME` → `…-shell-v4`; `validate_index.py` += the 6 school ids + `cec-members.json` (min 0).
 
 _Next: Thread 4 — Political (10 layers: council, election-district `subOf` assembly, community district/board live join, congress, state senate/assembly, judicial already done, borough-president, DA). Heaviest thread; operator supplies `borough-officials.json`. The NY Senate roster can use the Open Legislation key (Thread 5)._
+
+### Thread 4 — Political — DONE (2026-07-10, branch `claude/nyc-thread-4-political`)
+
+Eight political layers registered — **all 24 layers now live** (`EXPECT_LAYERS = 24`). Built on a fresh branch off the merged `main` (which had also gained borough-seal selection markers via PR #2 — untouched). Verified headless at City Hall (all 8 render, no page errors); smoke (24-layer) + `validate_index.py` pass.
+
+- `community-district` DONE — Socrata `5crt-au7u` (`boro_cd` "410" = Queens CD 10) **live-joined** to `ruf7-3wgc` (chair + district manager + office phone/email/website). City Hall → Manhattan CD 1, Chair Tammy Meltzer, DM Zach Bohmer. Note labels the board as appointed, not elected.
+- `congress` DONE — TIGERweb layer 0 + **real roster** `congress-roster.json` (26 NY U.S. House reps built now from congress-legislators, public CC0 — no scrape). City Hall → NY-10, Daniel S. Goldman (D). Via `registerIlgaChamber`.
+- `state-senate` / `state-assembly` DONE — TIGERweb layers 1/2 (`SLDU`/`SLDL`) via `registerIlgaChamber`; rosters `ny-senate-members.json` / `ny-assembly-members.json` ship **empty placeholders** (Thread 5 scrapes) → cards degrade to the official directory. City Hall → SD 27, AD 66.
+- `election-district` DONE — DCP ArcGIS `NYC_Election_Districts` (**4,214** features, paged past the 1000-row cap via new `loadArcGISPaged`). `ElectDist` = AD·1000 + ED. `subOf: "state-assembly"` (nests + frames like police-sector). City Hall → ED 72 (AD 66) — AD matches the parent Assembly district.
+- `council` DONE — Socrata `872g-cjhh` (51); `council-members.json` empty placeholder → links to `council.nyc.gov/district-N`.
+- `borough-president` / `district-attorney` DONE — share the Thread-1 `borough` geometry; `borough-officials.json` **empty placeholder** (operator supplies 10 hand-verified names, §11.3) → cards name no one and link to the **NYC Green Book** (authoritative directory).
+- SURPRISE — the kept `registerIlgaChamber` factory referenced `officeAddressForGeocode`, a Chicago helper that had been deleted in Thread 0 — never triggered until a real roster (congress) landed. Defined it + generalized the factory's Chicago labels (Springfield → `capitolLabel`, "ILGA profile/directory" → configurable) so all three chambers read correctly.
+
+Gates: `smoke_test.mjs` EXPECT_LAYERS=24 (political roster-backed layers are live/placeholder, not CI ground truth — the 3 offline anchors remain the deterministic check); `sw.js` `ROSTER_URLS` += the 5 new roster files, `CACHE_NAME` → `…-shell-v6`; `validate_index.py` += the 8 political ids + roster floors (`congress-roster` 26, rest 0).
+
+_Next: Thread 5 — Pipeline & CI (the scraper/builder pairs + weekly workflows for every roster: NY legislature, NYPD precinct CO, CEC, City Council/Legistar, congress refresh; operator-maintained borough-officials). Then Thread 6 — assembly & audit (final `LAYER_AREA_RANK` visual pass, the `sw.js` exactly-one-list invariant, a11y, deploy)._
