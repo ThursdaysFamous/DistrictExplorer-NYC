@@ -383,3 +383,22 @@ Eight political layers registered — **all 24 layers now live** (`EXPECT_LAYERS
 Gates: `smoke_test.mjs` EXPECT_LAYERS=24 (political roster-backed layers are live/placeholder, not CI ground truth — the 3 offline anchors remain the deterministic check); `sw.js` `ROSTER_URLS` += the 5 new roster files, `CACHE_NAME` → `…-shell-v6`; `validate_index.py` += the 8 political ids + roster floors (`congress-roster` 26, rest 0).
 
 _Next: Thread 5 — Pipeline & CI (the scraper/builder pairs + weekly workflows for every roster: NY legislature, NYPD precinct CO, CEC, City Council/Legistar, congress refresh; operator-maintained borough-officials). Then Thread 6 — assembly & audit (final `LAYER_AREA_RANK` visual pass, the `sw.js` exactly-one-list invariant, a11y, deploy)._
+
+### Thread 5 — Pipeline & CI — DONE (2026-07-10, branch `claude/nyc-thread-5-pipeline`)
+
+Six scraper/builder pairs + five staggered weekly workflows; **five rosters now carry real officeholders** (verified headless — the cards that linked to a directory in Thread 4 now name the person). Chicago pipeline removed. Smoke + `validate_index.py` (floors raised) pass.
+
+- `ny-senate-members` / `ny-assembly-members` DONE — `ny_legislature_scraper.py` (NY Senate **Open Legislation API**, key-gated) + `build_ny_roster.py`. 63 senate / 150 assembly, deduped by district (incumbent-preferred). City Hall → SD 27 Brian Kavanagh, AD 66 Deborah Glick.
+- `council-members` DONE — `council_scraper.py` + `build_council_roster.py`. **51** members. City Hall → CD 1 Christopher Marte.
+- `nypd-precinct-info` DONE — `nypd_precinct_scraper.py` (nyc.gov precinct pages, driven from `y76i-bdw7` precinct values) + `build_nypd_roster.py`. 78 precincts, **74 commanders**. Precinct 1 → Captain Robert Fisher.
+- `congress-roster` DONE — `build_congress_roster.py` (re-parameterized from Chicago; congress-legislators, 26 NY reps).
+- `cec-members` STUB — `cec_scraper.py` (Playwright, §6c) + `build_cec_roster.py` written; the per-council URL map on schools.nyc.gov needs confirming, so the builder keeps the **empty placeholder** (a short scrape is a no-op, not a failure) and the card links to the council page. Not a hard blocker.
+- `borough-officials` STUB — `build_borough_officials.py` + `scripts/borough_officials_source.json` (operator template). Left **empty on purpose**: a Nov-2025 election means the current 5 BP + 5 DA can't be verified here, and officeholders are never guessed — the operator fills the source (§11.3). Cards link to the NYC Green Book until then.
+- SURPRISE — the Open Legislation API `/members` endpoint covers **both** chambers but exposes **no party**; nysenate/nyassembly/council.nyc.gov don't cleanly label it either, so **party is stored null everywhere** (never guessed) — cards show name + district + the member's directory (where party is shown).
+- SURPRISE — Legistar `People.aspx` only populates the district-website link for **~24 of 51** council members, so its "district from `/district-N/` URLs" plan (§9) is incomplete; used `council.nyc.gov/districts/` instead (all 51, name in each card's photo alt).
+
+Workflows (staggered, open-PR-never-commit): `update-ny-legislature-roster.yml` (Mon 13:00), `update-congress-roster.yml` (Mon 13:30), `update-nypd-roster.yml` (Tue 13:00), `update-cec-roster.yml` (Wed 13:00, Playwright), `update-council-roster.yml` (Thu 13:00). Removed the Chicago scrapers/builders (`ilga`, `cpd`, `ccpsa`, `build_il`) + their workflows. `validate_index.py` roster floors raised (senate 60 / assembly 145 / council 48 / nypd 70 / congress 26; CEC + borough 0). Scraper intermediates go to `scripts/.cache/` (gitignored).
+
+**Operator, for CI (§11):** add two repo secrets — `SOCRATA_APP_TOKEN` (NYPD scrape) and `NYSENATE_API_KEY` (NY legislature scrape). Without them those two weekly workflows fail at the scrape step; the rest run without secrets.
+
+_Next: Thread 6 — assembly & audit (final `LAYER_AREA_RANK` visual pass, the `sw.js` exactly-one-list invariant check in `validate_index.py`, a11y/attribution, deploy). Optional: confirm the CEC council-page URL map so `cec_scraper.py` resolves; operator fills `borough_officials_source.json`._

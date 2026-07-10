@@ -1,1 +1,602 @@
-{}
+{
+"1": {
+"name": "Tommy Schiavoni",
+"party": null
+},
+"2": {
+"name": "Jodi Giglio",
+"party": null
+},
+"3": {
+"name": "Joe DeStefano",
+"party": null
+},
+"4": {
+"name": "Rebecca Kassay",
+"party": null
+},
+"5": {
+"name": "Doug Smith",
+"party": null
+},
+"6": {
+"name": "Philip Ramos",
+"party": null
+},
+"7": {
+"name": "Jerett Gandolfo",
+"party": null
+},
+"8": {
+"name": "Michael J. Fitzpatrick",
+"party": null
+},
+"9": {
+"name": "Michael Durso",
+"party": null
+},
+"10": {
+"name": "Steve Stern",
+"party": null
+},
+"11": {
+"name": "Kwani O'Pharrow",
+"party": null
+},
+"12": {
+"name": "Keith Brown",
+"party": null
+},
+"13": {
+"name": "Charles Lavine",
+"party": null
+},
+"14": {
+"name": "David McDonough",
+"party": null
+},
+"15": {
+"name": "Jake Ryan Blumencranz",
+"party": null
+},
+"16": {
+"name": "Daniel Norber",
+"party": null
+},
+"17": {
+"name": "John K. Mikulin",
+"party": null
+},
+"18": {
+"name": "Noah Burroughs",
+"party": null
+},
+"19": {
+"name": "Edward Ra",
+"party": null
+},
+"20": {
+"name": "Eric Brown",
+"party": null
+},
+"21": {
+"name": "Judy Griffin",
+"party": null
+},
+"22": {
+"name": "Michaelle C. Solages",
+"party": null
+},
+"23": {
+"name": "Stacey Pheffer Amato",
+"party": null
+},
+"24": {
+"name": "David Weprin",
+"party": null
+},
+"25": {
+"name": "Nily Rozic",
+"party": null
+},
+"26": {
+"name": "Edward Braunstein",
+"party": null
+},
+"27": {
+"name": "Sam Berger",
+"party": null
+},
+"28": {
+"name": "Andrew Hevesi",
+"party": null
+},
+"29": {
+"name": "Alicia Hyndman",
+"party": null
+},
+"30": {
+"name": "Steven Raga",
+"party": null
+},
+"31": {
+"name": "Khaleel Anderson",
+"party": null
+},
+"32": {
+"name": "Vivian Cook",
+"party": null
+},
+"33": {
+"name": "Clyde Vanel",
+"party": null
+},
+"34": {
+"name": "Jessica Gonzalez-Rojas",
+"party": null
+},
+"35": {
+"name": "Larinda Hooks",
+"party": null
+},
+"36": {
+"name": "Diana Moreno",
+"party": null
+},
+"37": {
+"name": "Claire Valdez",
+"party": null
+},
+"38": {
+"name": "Jenifer Rajkumar",
+"party": null
+},
+"39": {
+"name": "Catalina Cruz",
+"party": null
+},
+"40": {
+"name": "Ron Kim",
+"party": null
+},
+"41": {
+"name": "Kalman Yeger",
+"party": null
+},
+"42": {
+"name": "Rodneyse Bichotte Hermelyn",
+"party": null
+},
+"43": {
+"name": "Brian Cunningham",
+"party": null
+},
+"44": {
+"name": "Robert C. Carroll",
+"party": null
+},
+"45": {
+"name": "Michael Novakhov",
+"party": null
+},
+"46": {
+"name": "Alec Brook-Krasny",
+"party": null
+},
+"47": {
+"name": "William Colton",
+"party": null
+},
+"48": {
+"name": "Simcha Eichenstein",
+"party": null
+},
+"49": {
+"name": "Lester Chang",
+"party": null
+},
+"50": {
+"name": "Emily Gallagher",
+"party": null
+},
+"51": {
+"name": "Marcela Mitaynes",
+"party": null
+},
+"52": {
+"name": "Jo Anne Simon",
+"party": null
+},
+"53": {
+"name": "Maritza Davila",
+"party": null
+},
+"54": {
+"name": "Erik Dilan",
+"party": null
+},
+"55": {
+"name": "Latrice Walker",
+"party": null
+},
+"56": {
+"name": "Stefani Zinerman",
+"party": null
+},
+"57": {
+"name": "Phara Souffrant Forrest",
+"party": null
+},
+"58": {
+"name": "Monique Chandler-Waterman",
+"party": null
+},
+"59": {
+"name": "Jaime R. Williams",
+"party": null
+},
+"60": {
+"name": "Nikki Lucas",
+"party": null
+},
+"61": {
+"name": "Charles Fall",
+"party": null
+},
+"62": {
+"name": "Mike Reilly",
+"party": null
+},
+"63": {
+"name": "Samuel Pirozzolo",
+"party": null
+},
+"64": {
+"name": "Michael Tannousis",
+"party": null
+},
+"65": {
+"name": "Grace Lee",
+"party": null
+},
+"66": {
+"name": "Deborah Glick",
+"party": null
+},
+"67": {
+"name": "Linda Rosenthal",
+"party": null
+},
+"68": {
+"name": "Eddie Gibbs",
+"party": null
+},
+"69": {
+"name": "Micah Lasher",
+"party": null
+},
+"70": {
+"name": "Jordan Wright",
+"party": null
+},
+"71": {
+"name": "Al Taylor",
+"party": null
+},
+"72": {
+"name": "Manny De Los Santos",
+"party": null
+},
+"73": {
+"name": "Alex Bores",
+"party": null
+},
+"74": {
+"name": "Keith Powers",
+"party": null
+},
+"75": {
+"name": "Tony Simone",
+"party": null
+},
+"76": {
+"name": "Rebecca Seawright",
+"party": null
+},
+"77": {
+"name": "Landon C. Dais",
+"party": null
+},
+"78": {
+"name": "George Alvarez",
+"party": null
+},
+"79": {
+"name": "Chantel Jackson",
+"party": null
+},
+"80": {
+"name": "John Zaccaro Jr.",
+"party": null
+},
+"81": {
+"name": "Jeffrey Dinowitz",
+"party": null
+},
+"82": {
+"name": "Michael Benedetto",
+"party": null
+},
+"83": {
+"name": "Carl Heastie",
+"party": null
+},
+"84": {
+"name": "Amanda Septimo",
+"party": null
+},
+"85": {
+"name": "Emerita Torres",
+"party": null
+},
+"86": {
+"name": "Yudelka Tapia",
+"party": null
+},
+"87": {
+"name": "Karines Reyes",
+"party": null
+},
+"88": {
+"name": "Amy Paulin",
+"party": null
+},
+"89": {
+"name": "J. Gary Pretlow",
+"party": null
+},
+"90": {
+"name": "Nader Sayegh",
+"party": null
+},
+"91": {
+"name": "Steven Otis",
+"party": null
+},
+"92": {
+"name": "MaryJane Shimsky",
+"party": null
+},
+"93": {
+"name": "Chris Burdick",
+"party": null
+},
+"94": {
+"name": "Matthew Slater",
+"party": null
+},
+"95": {
+"name": "Dana Levenberg",
+"party": null
+},
+"96": {
+"name": "Patrick J. Carroll",
+"party": null
+},
+"97": {
+"name": "Aron Wieder",
+"party": null
+},
+"98": {
+"name": "Karl Brabenec",
+"party": null
+},
+"99": {
+"name": "Christopher Eachus",
+"party": null
+},
+"100": {
+"name": "Paula Kay",
+"party": null
+},
+"101": {
+"name": "Brian Maher",
+"party": null
+},
+"102": {
+"name": "Chris Tague",
+"party": null
+},
+"103": {
+"name": "Sarahana Shrestha",
+"party": null
+},
+"104": {
+"name": "Jonathan Jacobson",
+"party": null
+},
+"105": {
+"name": "Anil Beephan Jr.",
+"party": null
+},
+"106": {
+"name": "Didi Barrett",
+"party": null
+},
+"107": {
+"name": "Scott H. Bendett",
+"party": null
+},
+"108": {
+"name": "John T. McDonald III",
+"party": null
+},
+"109": {
+"name": "Gabriella Romero",
+"party": null
+},
+"110": {
+"name": "Phil Steck",
+"party": null
+},
+"111": {
+"name": "Angelo Santabarbara",
+"party": null
+},
+"112": {
+"name": "Mary Beth Walsh",
+"party": null
+},
+"113": {
+"name": "Carrie Woerner",
+"party": null
+},
+"114": {
+"name": "Matthew Simpson",
+"party": null
+},
+"115": {
+"name": "Michael Cashman",
+"party": null
+},
+"116": {
+"name": "Scott Gray",
+"party": null
+},
+"117": {
+"name": "Kenneth Blankenbush",
+"party": null
+},
+"118": {
+"name": "Robert Smullen",
+"party": null
+},
+"119": {
+"name": "Marianne Buttenschon",
+"party": null
+},
+"120": {
+"name": "William A. Barclay",
+"party": null
+},
+"121": {
+"name": "Joe Angelino",
+"party": null
+},
+"122": {
+"name": "Brian D. Miller",
+"party": null
+},
+"123": {
+"name": "Donna Lupardo",
+"party": null
+},
+"124": {
+"name": "Christopher Friend",
+"party": null
+},
+"125": {
+"name": "Anna Kelles",
+"party": null
+},
+"126": {
+"name": "John Lemondes",
+"party": null
+},
+"127": {
+"name": "Albert A. Stirpe",
+"party": null
+},
+"128": {
+"name": "Pamela J. Hunter",
+"party": null
+},
+"129": {
+"name": "William Magnarelli",
+"party": null
+},
+"130": {
+"name": "Brian Manktelow",
+"party": null
+},
+"131": {
+"name": "Jeff Gallahan",
+"party": null
+},
+"132": {
+"name": "Philip Palmesano",
+"party": null
+},
+"133": {
+"name": "Andrea Bailey",
+"party": null
+},
+"134": {
+"name": "Josh Jensen",
+"party": null
+},
+"135": {
+"name": "Jen Lunsford",
+"party": null
+},
+"136": {
+"name": "Sarah Clark",
+"party": null
+},
+"137": {
+"name": "Demond Meeks",
+"party": null
+},
+"138": {
+"name": "Harry B. Bronson",
+"party": null
+},
+"139": {
+"name": "Stephen Hawley",
+"party": null
+},
+"140": {
+"name": "William Conrad",
+"party": null
+},
+"141": {
+"name": "Crystal Peoples-Stokes",
+"party": null
+},
+"142": {
+"name": "Patrick Burke",
+"party": null
+},
+"143": {
+"name": "Patrick Chludzinski",
+"party": null
+},
+"144": {
+"name": "Paula Bologna",
+"party": null
+},
+"145": {
+"name": "Angelo J. Morinello",
+"party": null
+},
+"146": {
+"name": "Karen McMahon",
+"party": null
+},
+"147": {
+"name": "David DiPietro",
+"party": null
+},
+"148": {
+"name": "Joseph Sempolinski",
+"party": null
+},
+"149": {
+"name": "Jonathan Rivera",
+"party": null
+},
+"150": {
+"name": "Andrew Molitor",
+"party": null
+}
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "Operator-maintained source for Borough President + District Attorney (METRO_EXPANSION_PLAYBOOK §11.3). Fill each name from the official BP/DA site and set url to that official page, then run scripts/build_borough_officials.py. Leave a name null to omit it (the card then links to the NYC Green Book instead of naming anyone). NEVER guess a name — these are elected offices and a wrong name is a real error.",
+  "_verified": null,
+  "boroughs": {
+    "Manhattan": {
+      "bp": { "name": null, "url": null },
+      "da": { "name": null, "url": null }
+    },
+    "Bronx": {
+      "bp": { "name": null, "url": null },
+      "da": { "name": null, "url": null }
+    },
+    "Brooklyn": {
+      "bp": { "name": null, "url": null },
+      "da": { "name": null, "url": null }
+    },
+    "Queens": {
+      "bp": { "name": null, "url": null },
+      "da": { "name": null, "url": null }
+    },
+    "Staten Island": {
+      "bp": { "name": null, "url": null },
+      "da": { "name": null, "url": null }
+    }
+  }
+}
