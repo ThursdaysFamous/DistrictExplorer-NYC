@@ -1786,8 +1786,15 @@
     "borough",            // 5 counties — largest
     "judicial-district",  // same 5 county polygons, relabeled; drawn just above borough
     "municipal-court",    // 28 Civil Court districts
+    "fire-battalion",     // 49 FDNY battalions
+    // sector (303) sits just BEFORE its parent precinct so the precinct outline
+    // frames the sector fills (same rule as Chicago's police beats)
+    "police-sector",      // 303 NYPD sectors (sub-selection of precinct)
+    "police-precinct",    // 78 NYPD precincts
     "zip-code",           // ~178 MODZCTA
-    "neighborhood"        // ~262 NTAs — smallest polygon layer so far
+    "neighborhood",       // ~262 NTAs
+    "police-station",     // point marker — always topmost
+    "fire-station"        // point marker — always topmost
   ];
 
   var layers = [];       // registered modules
@@ -2858,6 +2865,273 @@
       { name: "borough", label: "Borough", keys: ["boro_name"] },
       { label: "How it's elected", value: "Civil Court judges are elected by district." },
       { label: "Directory", html: '<a href="https://www.nycourts.gov/courts/nyc/civil/" target="_blank" rel="noopener">NYC Civil Court directory</a>' }
+    ]
+  });
+
+
+  /* =========================================================================
+   * THREAD 2 — PUBLIC SAFETY (METRO_EXPANSION_PLAYBOOK §7 rows 4–8)
+   * NYPD Precinct (+ Sector sub-layer), Police Station / Firehouse (nearest 3),
+   * FDNY Battalion. Commanders/NCOs aren't in open data, so those cards surface
+   * only what each dataset actually contains and link to the official body;
+   * nypd-precinct-info.json ships as an empty placeholder until the Thread 5
+   * scrape lands, and the precinct card degrades honestly without it.
+   * ======================================================================= */
+
+  // Title-case an ALL-CAPS/loose string (FacDB names + addresses are uppercase).
+  function toTitleCase(s) {
+    return String(s).toLowerCase().replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); });
+  }
+  // Ordinal for the NYPD per-precinct page slug (1 -> "1st", 13 -> "13th").
+  function ordinalSuffix(n) {
+    n = parseInt(n, 10);
+    var s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+  // Point layers (FacDB police stations, FDNY firehouses) serve NO geometry via
+  // the .geojson route — the coordinates live in latitude/longitude *properties*.
+  // Build a real Point FeatureCollection from the .json rows so both the overlay
+  // markers and the nearest-N query work. Reused by the school-site layer later.
+  function makeSocrataPointLoader(datasetId, whereClause, latField, lngField) {
+    return makeCached(function () {
+      var q = "?$limit=1000" + (whereClause ? "&$where=" + encodeURIComponent(whereClause) : "");
+      var url = withAppToken("https://data.cityofnewyork.us/resource/" + datasetId + ".json" + q);
+      return fetchJSONWithRetry(url, {}, 2).then(function (rows) {
+        var feats = [];
+        (rows || []).forEach(function (r) {
+          var lat = parseFloat(r[latField]), lng = parseFloat(r[lngField]);
+          if (isFinite(lat) && isFinite(lng)) {
+            feats.push({ type: "Feature", properties: r, geometry: { type: "Point", coordinates: [lng, lat] } });
+          }
+        });
+        return { type: "FeatureCollection", features: feats };
+      });
+    });
+  }
+  // Declarative nearest-3 point layer (haversine, straight-line). `line(props)`
+  // formats one list item; `pick` isn't needed — the raw feature props are passed.
+  function registerNearestPointLayer(opts) {
+    registerLayer({
+      id: opts.id,
+      group: opts.group,
+      label: opts.label + " (nearest 3)",
+      color: opts.color,
+      overlay: {
+        load: opts.loader,
+        pointToLayer: function (feature, latlng) {
+          return L.circleMarker(latlng, { radius: 5, color: opts.color, weight: 1.5, fillColor: opts.fill, fillOpacity: 0.85 });
+        }
+      },
+      query: function (point, seq) {
+        return opts.loader().then(function (gj) {
+          var feats = (gj && gj.features) || [], wd = [];
+          for (var i = 0; i < feats.length; i++) {
+            var ll = pointFeatureLatLng(feats[i]);
+            if (!ll) continue;
+            wd.push({ props: feats[i].properties || {}, d: haversineMiles(point.lat, point.lng, ll.lat, ll.lng) });
+          }
+          if (!wd.length) return null;
+          wd.sort(function (a, b) { return a.d - b.d; });
+          return { seq: seq, items: wd.slice(0, 3) };
+        });
+      },
+      render: function (result) {
+        var wrap = document.createElement("div");
+        var intro = document.createElement("p");
+        intro.style.margin = "0 0 8px";
+        intro.textContent = opts.intro;
+        wrap.appendChild(intro);
+        var ol = document.createElement("ol");
+        ol.style.margin = "0";
+        ol.style.paddingLeft = "20px";
+        result.items.forEach(function (s) {
+          var li = document.createElement("li");
+          li.textContent = opts.line(s.props) + " — " + s.d.toFixed(2) + " mi";
+          ol.appendChild(li);
+        });
+        wrap.appendChild(ol);
+        return wrap;
+      }
+    });
+  }
+
+  /* ---------- NYPD Precinct (78) ----------
+   * Boundary from Socrata y76i-bdw7 (`precinct`). Joins the same-origin
+   * nypd-precinct-info.json roster (commanding officer, keyed by precinct number
+   * — empty placeholder until Thread 5) and the FacDB station houses (address +
+   * map pin, keyed on `policeprct`) so the card carries real content even before
+   * the CO scrape. Oversight is non-elected (CCRB is appointed + citywide),
+   * labeled as such; the NYPD precinct page carries the CO + community council. */
+  var loadPolicePrecincts = makeCachedLoader("y76i-bdw7");
+  var loadPrecinctInfo = makeCached(function () { return fetchJSONWithRetry("data/app/nypd-precinct-info.json", {}, 2); });
+  var loadPoliceStationPoints = makeSocrataPointLoader("ji82-xba5", "factype='POLICE STATION'", "latitude", "longitude");
+  function policeStationsByPrecinct(gj) {
+    if (gj && gj.__byPrecinct) return gj.__byPrecinct;
+    var idx = {};
+    ((gj && gj.features) || []).forEach(function (f) {
+      var p = f.properties || {};
+      var k = p.policeprct != null ? String(parseInt(p.policeprct, 10)) : null;
+      if (k && !idx[k]) idx[k] = p;
+    });
+    if (gj) gj.__byPrecinct = idx;
+    return idx;
+  }
+  registerLayer({
+    id: "police-precinct",
+    group: "safety",
+    label: "NYPD Precinct",
+    overlay: {
+      load: loadPolicePrecincts,
+      style: { color: "#7A0A1C", weight: 1.5, fillColor: "#C8102E", fillOpacity: 0.06, dashArray: "2 6" }
+    },
+    query: function (point, seq) {
+      return Promise.all([
+        loadPolicePrecincts(),
+        loadPrecinctInfo().catch(function () { return {}; }),
+        loadPoliceStationPoints().catch(function () { return null; })
+      ]).then(function (r) {
+        var gj = r[0], info = r[1] || {}, stationGj = r[2];
+        var feature = findFeatureContaining(gj, point);
+        if (!feature) return null;
+        var pct = findPropCI(feature.properties || {}, ["precinct"]);
+        var num = (pct != null && pct !== "") ? parseInt(pct, 10) : null;
+        var row = (num != null && info) ? info[String(num)] : null;
+        var station = (num != null && stationGj) ? policeStationsByPrecinct(stationGj)[String(num)] : null;
+        return {
+          seq: seq,
+          precinct: num,
+          commander: row ? (row.commander || row.commanderName) : null,
+          phone: row ? row.phone : null,
+          sourceUrl: row ? (row.source_url || row.sourceUrl) : null,
+          stationName: station ? station.facname : null,
+          stationAddress: station ? station.address : null,
+          stationBoro: station ? station.boro : null
+        };
+      });
+    },
+    render: function (result) {
+      var fields = [{ label: "Precinct", value: result.precinct != null ? String(result.precinct) : "Unknown" }];
+      if (result.commander) fields.push({ label: "Commanding Officer", value: String(result.commander) });
+      if (result.phone) fields.push({ label: "Phone", value: String(result.phone) });
+      if (result.stationAddress) {
+        var stn = (result.stationName ? toTitleCase(result.stationName) + " — " : "") + toTitleCase(result.stationAddress);
+        fields.push({ label: "Station house", value: stn, pin: "#C8102E" });
+      }
+      if (result.precinct != null) {
+        var url = "https://www.nyc.gov/site/nypd/bureaus/patrol/precincts/" + ordinalSuffix(result.precinct) + "-precinct.page";
+        fields.push({ label: "Precinct page", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYPD ' + ordinalSuffix(result.precinct) + ' Precinct</a>' });
+      }
+      fields.push({ label: "Civilian oversight", html: '<a href="https://www.nyc.gov/site/ccrb/index.page" target="_blank" rel="noopener">CCRB</a> — appointed, citywide' });
+      return renderFieldList(fields);
+    },
+    pointOfInterest: function (result) {
+      if (!result.stationAddress) return null;
+      var addr = toTitleCase(result.stationAddress) + (result.stationBoro ? ", " + toTitleCase(result.stationBoro) : "");
+      var label = (result.precinct != null ? "NYPD " + ordinalSuffix(result.precinct) + " Precinct" : "Precinct") + " Station House";
+      return { label: label, address: addr };
+    },
+    onToggle: function (on) {
+      // cascade the sector sub-layer off when the precinct is turned off
+      if (!on && state.layersOn["police-sector"]) {
+        var box = document.getElementById("toggle-police-sector");
+        if (box && box.checked) box.click();
+      }
+    }
+  });
+
+  /* ---------- NYPD Sector (303, sub-selection of Precinct) ----------
+   * Sector geometry is unusually public for NYPD. `pct` is the parent precinct;
+   * no structured NCO roster exists, so the card names only the sector + patrol
+   * borough. subOf:"police-precinct" nests it and frames it with the precinct
+   * outline (same pattern as Chicago's police beats). */
+  var loadPoliceSectors = makeCachedLoader("5rqd-h5ci");
+  var PATROL_BOROUGH = {
+    PBMS: "Manhattan South", PBMN: "Manhattan North", PBBX: "Bronx",
+    PBBN: "Brooklyn North", PBBS: "Brooklyn South", PBQN: "Queens North",
+    PBQS: "Queens South", PBSI: "Staten Island"
+  };
+  registerLayer({
+    id: "police-sector",
+    group: "safety",
+    subOf: "police-precinct",
+    label: "NYPD Sector",
+    hoverName: function (feature) { return findPropCI(feature.properties || {}, ["sector"]) || null; },
+    overlay: {
+      load: loadPoliceSectors,
+      style: { color: "#7A0A1C", weight: 1, fillColor: "#E4572E", fillOpacity: 0.14, dashArray: null }
+    },
+    query: function (point, seq) {
+      return loadPoliceSectors().then(function (gj) {
+        var f = findFeatureContaining(gj, point);
+        if (!f) return null;
+        var p = f.properties || {};
+        return { seq: seq, sector: findPropCI(p, ["sector"]), pct: findPropCI(p, ["pct"]), patrolBoro: findPropCI(p, ["patrol_bor"]) };
+      });
+    },
+    render: function (result) {
+      var fields = [{ label: "Sector", value: result.sector ? String(result.sector) : "Unknown" }];
+      if (result.pct) fields.push({ label: "Precinct", value: String(result.pct) });
+      if (result.patrolBoro) fields.push({ label: "Patrol Borough", value: PATROL_BOROUGH[result.patrolBoro] || String(result.patrolBoro) });
+      return renderFieldList(fields);
+    },
+    onToggle: function (on) {
+      var precinctRt = layerRuntime["police-precinct"];
+      if (on) {
+        if (!state.layersOn["police-precinct"]) {
+          var box = document.getElementById("toggle-police-precinct");
+          if (box && !box.checked) box.click();
+        }
+        precinctRt.outlineOnly = true;
+      } else {
+        precinctRt.outlineOnly = false;
+      }
+    }
+  });
+
+  /* ---------- Police Station (nearest 3) — FacDB `factype='POLICE STATION'` ---------- */
+  registerNearestPointLayer({
+    id: "police-station",
+    group: "safety",
+    label: "Police Station",
+    color: "#0B5394", fill: "#41B6E6",
+    loader: loadPoliceStationPoints,
+    intro: "Nearest NYPD station houses, straight-line distance:",
+    line: function (p) {
+      var name = findPropCI(p, ["facname"]);
+      var addr = findPropCI(p, ["address"]);
+      var pct = findPropCI(p, ["policeprct"]);
+      return (name ? toTitleCase(name) : "Police station") + (pct ? " (Precinct " + pct + ")" : "") + (addr ? " — " + toTitleCase(addr) : "");
+    }
+  });
+
+  /* ---------- Firehouse (nearest 3) — Socrata hc8x-tcnd (219) ---------- */
+  var loadFirehouses = makeSocrataPointLoader("hc8x-tcnd", null, "latitude", "longitude");
+  registerNearestPointLayer({
+    id: "fire-station",
+    group: "safety",
+    label: "Firehouse",
+    color: "#B3261E", fill: "#E4572E",
+    loader: loadFirehouses,
+    intro: "Nearest FDNY firehouses, straight-line distance:",
+    line: function (p) {
+      var name = findPropCI(p, ["facilityname"]);
+      var addr = findPropCI(p, ["facilityaddress"]);
+      var boro = findPropCI(p, ["borough"]);
+      return (name ? String(name) : "Firehouse") + (addr ? " — " + toTitleCase(addr) : "") + (boro ? ", " + toTitleCase(boro) : "");
+    }
+  });
+
+  /* ---------- FDNY Battalion (49) — DCP ArcGIS (Socrata mirror is map-type) ---------- */
+  var FIRE_BATTALIONS_SERVICE = "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Fire_Battalions/FeatureServer/0";
+  var loadFireBattalions = makeCached(function () { return loadArcGISGeoJSON(FIRE_BATTALIONS_SERVICE); });
+  registerPolygonLayer({
+    id: "fire-battalion",
+    group: "safety",
+    label: "FDNY Battalion",
+    loader: loadFireBattalions,
+    style: { color: "#B3261E", weight: 2, fillColor: "#E4572E", fillOpacity: 0.05, dashArray: "6 3" },
+    fields: [
+      { name: "battalion", label: "FDNY Battalion", keys: ["firebn"], primary: true }
     ]
   });
 

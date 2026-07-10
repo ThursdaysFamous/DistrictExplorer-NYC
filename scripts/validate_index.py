@@ -44,6 +44,7 @@ MIN_REGISTER_LAYER = 5
 # Grows thread by thread toward the 24-layer §7 roster.
 EXPECT_LAYER_IDS = [
     "neighborhood", "zip-code", "borough", "judicial-district", "municipal-court",
+    "police-precinct", "police-sector", "police-station", "fire-station", "fire-battalion",
 ]
 
 # file -> (min features, max features) for the offline-anchor boundary layers
@@ -54,9 +55,12 @@ GEOMETRY_FILES = {
     "municipal-court-districts.json": (28, 28),
 }
 
-# file -> minimum key count (officeholder rosters). None yet — the NYC roster
-# pipeline lands in Thread 5 (§9), refilling this map.
-ROSTER_FILES = {}
+# file -> minimum key count (officeholder rosters). nypd-precinct-info ships as
+# an empty placeholder until its Thread 5 scrape, so it only has to be a JSON
+# object (min 0). The floor is raised once the scrape lands.
+ROSTER_FILES = {
+    "nypd-precinct-info.json": 0,
+}
 
 
 def fail(msg):

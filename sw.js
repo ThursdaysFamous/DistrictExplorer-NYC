@@ -10,7 +10,7 @@
 // GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
 // refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
 // data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v2";
+const CACHE_NAME = "nyc-district-explorer-shell-v3";
 
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
@@ -39,9 +39,11 @@ const GEOMETRY_URLS = [
 
 // Roster/officeholder data (also in data/app/) is refreshed by the weekly CI
 // and must never be served stale — network-first, with the cached copy only as
-// an offline fallback. Empty in Thread 0 — refilled as the NYC roster files
-// land with the pipeline in Thread 5 (§9).
-const ROSTER_URLS = [];
+// an offline fallback. `nypd-precinct-info.json` ships as an empty placeholder
+// until the Thread 5 scrape lands; more roster files join as later threads land.
+const ROSTER_URLS = [
+  "./data/app/nypd-precinct-info.json",
+];
 
 const PRECACHE_URLS = SHELL_URLS.concat(GEOMETRY_URLS);
 

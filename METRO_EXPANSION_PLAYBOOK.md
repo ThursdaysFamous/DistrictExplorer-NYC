@@ -337,3 +337,19 @@ Five layers registered (`EXPECT_LAYERS = 5`); `LAYER_AREA_RANK` = borough → ju
 Gates re-pinned: `smoke_test.mjs` EXPECT_LAYERS=5 + City-Hall/Brooklyn ground truth + mid-river no-borough + per-layer failure isolation; `sw.js` `GEOMETRY_URLS` = the 3 anchors, `CACHE_NAME` → `…-shell-v2`; `validate_index.py` GEOMETRY_FILES (5/5/28) + `EXPECT_LAYER_IDS` + empty ROSTER_FILES. Full-precision sources committed under `data/*.geojson` (excluded from the Pages artifact by `deploy-pages.yml`).
 
 _Next: Thread 2 — Public Safety (NYPD precinct + sector `subOf`, police/fire stations nearest-3, FDNY battalion). `nypd-precinct-info.json` ships as an empty placeholder._
+
+### Thread 2 — Public Safety — DONE (2026-07-10)
+
+Five safety layers registered (`EXPECT_LAYERS = 10`). Verified headless at City Hall (all 5 render; `subOf` nesting confirmed on map + sidebar). Smoke test (10 checks) + `validate_index.py` pass. `CNAME` set to `nyc.chidistricts.com` (operator-owned subdomain). Socrata app token wired + verified.
+
+- `police-precinct` DONE — Socrata `y76i-bdw7` (78). Joins `data/app/nypd-precinct-info.json` (CO roster, **empty placeholder** until Thread 5) **and** the FacDB station houses (address + map pin, keyed on `policeprct`) so the card carries real content pre-scrape (City Hall → Precinct 1, 1st Precinct station @ 16-20 Ericsson Pl). Oversight links: NYPD precinct page (ordinal URL) + CCRB (labeled appointed/citywide, non-elected).
+- `police-sector` STUB-roster — Socrata `5rqd-h5ci` (303), `subOf: "police-precinct"` (nests + frames like Chicago beats). Shows sector + parent precinct + patrol borough (code→name map). No NCO roster exists.
+- `police-station` DONE — FacDB `ji82-xba5`, nearest-3 haversine.
+- `fire-station` DONE — Socrata `hc8x-tcnd` (219), nearest-3.
+- `fire-battalion` DONE — DCP ArcGIS `NYC_Fire_Battalions` (49, `FireBN`) via `registerPolygonLayer` + `loadArcGISGeoJSON`.
+- SURPRISE — **FacDB `factype` is `'POLICE STATION'` (uppercase)**; the playbook's `'Police Station'` matches **0 rows** (80 with the uppercase value). Used `$where=factype='POLICE STATION'`.
+- SURPRISE — **NYC point datasets (FacDB, firehouses) serve NO geometry on the `.geojson` route** — coordinates live in `latitude`/`longitude` *properties*. Added a reusable `makeSocrataPointLoader(dataset, where, latField, lngField)` that builds a real Point FeatureCollection from the `.json` rows (used by both nearest-3 layers; reused by school-site in Thread 3). Added `registerNearestPointLayer` factory + `toTitleCase`/`ordinalSuffix` helpers.
+
+Gates: `smoke_test.mjs` EXPECT_LAYERS=10 (safety layers are live-API, not asserted as CI ground truth); `sw.js` `ROSTER_URLS` += `nypd-precinct-info.json`, `CACHE_NAME` → `…-shell-v3`; `validate_index.py` EXPECT_LAYER_IDS += the 5 safety ids, ROSTER_FILES += `nypd-precinct-info.json` (min 0).
+
+_Next: Thread 3 — Schools (ES/MS/HS attendance zones with honest choice-based empty states, community school district, CEC placeholder, school-site nearest-3). School-zone dataset IDs rotate yearly — add the freshness chore._

@@ -41,7 +41,7 @@ const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
 const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn)
 const WATER = "40.7223,-73.9697"; // mid-East-River — legitimately no borough
 const OFFLINE = ["borough", "judicial-district", "municipal-court"];
-const EXPECT_LAYERS = 5; // Thread 1: neighborhood, zip-code, borough, judicial-district, municipal-court
+const EXPECT_LAYERS = 10; // Threads 1–2: + police-precinct, police-sector, police-station, fire-station, fire-battalion
 const BOOT_TIMEOUT = 45000; // Leaflet CDN + first paint on a cold CI runner
 const QUERY_TIMEOUT = 25000;
 
