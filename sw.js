@@ -10,7 +10,7 @@
 // GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
 // refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
 // data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v5";
+const CACHE_NAME = "nyc-district-explorer-shell-v6";
 
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
@@ -44,6 +44,11 @@ const GEOMETRY_URLS = [
 const ROSTER_URLS = [
   "./data/app/nypd-precinct-info.json",
   "./data/app/cec-members.json",
+  "./data/app/congress-roster.json",
+  "./data/app/council-members.json",
+  "./data/app/ny-senate-members.json",
+  "./data/app/ny-assembly-members.json",
+  "./data/app/borough-officials.json",
 ];
 
 const PRECACHE_URLS = SHELL_URLS.concat(GEOMETRY_URLS);

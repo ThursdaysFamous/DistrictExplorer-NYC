@@ -1909,15 +1909,25 @@
   // here, or reorderActiveLayers() and hoverContainingLayers() silently ignore
   // it. Thread 1 registers the 5 geography/anchor layers below.
   var LAYER_AREA_RANK = [
+    // borough / judicial-district / BP / DA are the same 5 county polygons —
+    // later = drawn on top (§7).
     "borough",            // 5 counties — largest
-    "judicial-district",  // same 5 county polygons, relabeled; drawn just above borough
+    "judicial-district",
+    "borough-president",
+    "district-attorney",
+    "congress",           // ~13 in-city U.S. House districts
     "municipal-court",    // 28 Civil Court districts
+    "state-senate",       // ~26 in-city
     "school-district",    // 32 community school districts
-    "cec",                // same 32 districts, relabeled; drawn just after school-district
+    "cec",                // same 32, drawn just after school-district
     "fire-battalion",     // 49 FDNY battalions
-    // sector (303) sits just BEFORE its parent precinct so the precinct outline
-    // frames the sector fills (same rule as Chicago's police beats)
-    "police-sector",      // 303 NYPD sectors (sub-selection of precinct)
+    "council",            // 51 City Council districts
+    "community-district", // 59 community districts
+    // election-district (~4,200) sits just BEFORE its parent Assembly so the
+    // Assembly outline frames its fills (same rule as police-sector below)
+    "election-district",
+    "state-assembly",     // ~65 in-city
+    "police-sector",      // 303 sectors — just before its parent precinct
     "police-precinct",    // 78 NYPD precincts
     "zip-code",           // ~178 MODZCTA
     "neighborhood",       // ~262 NTAs
@@ -3410,6 +3420,251 @@
 
 
   /* =========================================================================
+   * THREAD 4 — POLITICAL (METRO_EXPANSION_PLAYBOOK §7 rows 15–20, 23–24)
+   * City Council, Election District (subOf Assembly), Community District/Board
+   * (live chair + district-manager join), U.S. House + NY Senate + NY Assembly
+   * (TIGERweb + roster), Borough President + District Attorney (shared borough
+   * geometry). Officeholder rosters that need a scrape ship as empty placeholders
+   * until Thread 5 and the cards degrade to the official body; Congress ships a
+   * real roster (public congress-legislators, no scrape), and Community Board
+   * chair/district-manager come from a live Socrata dataset.
+   * ======================================================================= */
+
+  /* ---------- City Council District (51) — Socrata 872g-cjhh ---------- */
+  var loadCouncilDistricts = makeCachedLoader("872g-cjhh");
+  var loadCouncilMembers = makeCached(function () { return fetchJSONWithRetry("data/app/council-members.json", {}, 2); });
+  registerLayer({
+    id: "council", group: "political", label: "City Council District",
+    overlay: { load: loadCouncilDistricts, style: { color: "#5B2A86", weight: 2, fillColor: "#7048E8", fillOpacity: 0.06 } },
+    query: function (point, seq) {
+      return Promise.all([loadCouncilDistricts(), loadCouncilMembers().catch(function () { return {}; })]).then(function (r) {
+        var gj = r[0], roster = r[1] || {};
+        var f = findFeatureContaining(gj, point);
+        if (!f) return null;
+        var d = intField(findPropCI(f.properties || {}, ["coundist"]));
+        var row = d != null ? roster[d] : null;
+        return { seq: seq, district: d, member: row || null };
+      });
+    },
+    render: function (result) {
+      var fields = [{ label: "Council District", value: result.district != null ? String(result.district) : "Unknown" }];
+      if (result.member) {
+        fields.push({ label: "Council Member", value: String(result.member.name) });
+        if (result.member.party) fields.push({ label: "Party", value: String(result.member.party) });
+      }
+      var url = result.district != null ? ("https://council.nyc.gov/district-" + result.district + "/") : "https://council.nyc.gov/districts/";
+      fields.push({ label: result.member ? "Council page" : "Council directory", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYC Council' + (result.district != null ? " District " + result.district : "") + '</a>' });
+      return renderFieldList(fields);
+    }
+  });
+
+  /* ---------- Community District / Community Board (59) — Socrata 5crt-au7u ----------
+   * `boro_cd` encodes borough + district ("410" = Queens CD 10). Live-joined to
+   * ruf7-3wgc (the only machine-readable CB roster) for the elected-adjacent
+   * board chair + district manager + office contacts. Board members themselves
+   * are BP/Council-appointed — the note says so. */
+  var loadCommunityDistricts = makeCachedLoader("5crt-au7u");
+  var loadCommunityBoardInfo = makeCached(function () { return loadSocrataJSON("ruf7-3wgc"); });
+  var BORO_NAME_BY_DIGIT = { 1: "Manhattan", 2: "Bronx", 3: "Brooklyn", 4: "Queens", 5: "Staten Island" };
+  function decodeBoroCd(v) {
+    if (v == null) return null;
+    var s = String(parseInt(v, 10));
+    if (s.length < 2) return null;
+    return { boro: BORO_NAME_BY_DIGIT[parseInt(s.charAt(0), 10)] || null, cd: parseInt(s.slice(1), 10) };
+  }
+  function communityBoardIndex(rows) {
+    if (rows && rows.__cbIdx) return rows.__cbIdx;
+    var idx = {};
+    (rows || []).forEach(function (row) {
+      var m = /(\d+)/.exec(row.community_board || "");
+      if (row.borough && m) idx[row.borough + "|" + parseInt(m[1], 10)] = row;
+    });
+    try { if (rows) rows.__cbIdx = idx; } catch (e) { /* frozen */ }
+    return idx;
+  }
+  registerLayer({
+    id: "community-district", group: "political", label: "Community District / Board",
+    overlay: { load: loadCommunityDistricts, style: { color: "#B5179E", weight: 2, fillColor: "#F72585", fillOpacity: 0.05, dashArray: "5 3" } },
+    query: function (point, seq) {
+      return Promise.all([loadCommunityDistricts(), loadCommunityBoardInfo().catch(function () { return []; })]).then(function (r) {
+        var gj = r[0], rows = r[1] || [];
+        var f = findFeatureContaining(gj, point);
+        if (!f) return null;
+        var dec = decodeBoroCd(findPropCI(f.properties || {}, ["boro_cd"]));
+        if (!dec) return null;
+        var row = dec.boro ? communityBoardIndex(rows)[dec.boro + "|" + dec.cd] : null;
+        return { seq: seq, boro: dec.boro, cd: dec.cd, info: row || null };
+      });
+    },
+    render: function (result) {
+      var fields = [{ label: "Community District", value: (result.boro ? result.boro + " " : "") + "CD " + result.cd }];
+      var i = result.info;
+      if (i) {
+        if (i.cb_chair) fields.push({ label: "Board Chair", value: String(i.cb_chair) });
+        if (i.cb_district_manager) fields.push({ label: "District Manager", value: String(i.cb_district_manager) });
+        if (i.neighborhoods) fields.push({ label: "Neighborhoods", value: String(i.neighborhoods) });
+        if (i.cb_office_phone) fields.push({ label: "Office Phone", value: String(i.cb_office_phone) });
+        if (i.cb_office_email) fields.push({ label: "Email", html: '<a href="mailto:' + sanitize(i.cb_office_email) + '">' + sanitize(i.cb_office_email) + '</a>' });
+        var web = i.cb_website && i.cb_website.url ? safeHttpUrl(i.cb_website.url) : null;
+        if (web) fields.push({ label: "Website", html: '<a href="' + sanitize(web) + '" target="_blank" rel="noopener">' + sanitize(web) + '</a>' });
+      }
+      fields.push({ label: "Note", value: "Board members are appointed by the Borough President and Council members (the board itself is not elected)." });
+      return renderFieldList(fields);
+    }
+  });
+
+  /* ---------- U.S. House / NY Senate / NY Assembly — TIGERweb + roster ----------
+   * All three via registerIlgaChamber (TIGERweb boundary + same-origin roster).
+   * Congress ships a real roster built from congress-legislators; the two state
+   * chambers ship empty placeholders until the Thread 5 scrapes and degrade to
+   * the official directory. */
+  var loadCongressRoster = makeCached(function () { return fetchJSONWithRetry("data/app/congress-roster.json", {}, 2); });
+  registerIlgaChamber({
+    id: "congress", label: "U.S. House District", layerIndex: 0,
+    districtFields: ["cd119", "cd118", "cd", "cdfp"],
+    loadRoster: function () { return loadCongressRoster(); },
+    memberLabel: "U.S. Representative",
+    directoryUrl: "https://www.house.gov/representatives",
+    profileLabel: "Representative's website", directoryLabel: "House directory",
+    style: { color: "#1D3557", weight: 2, fillColor: "#457B9D", fillOpacity: 0.05, dashArray: "8 3" }
+  });
+  var loadNySenateMembers = makeCached(function () { return fetchJSONWithRetry("data/app/ny-senate-members.json", {}, 2); });
+  registerIlgaChamber({
+    id: "state-senate", label: "NY State Senate District", layerIndex: 1,
+    districtFields: ["sldu", "sldust"],
+    loadRoster: function () { return loadNySenateMembers(); },
+    memberLabel: "State Senator", capitolLabel: "Albany Office",
+    directoryUrl: "https://www.nysenate.gov/senators-committees",
+    profileLabel: "Senator's page", directoryLabel: "NY Senate directory",
+    style: { color: "#14532D", weight: 2, fillColor: "#2E7D5B", fillOpacity: 0.05, dashArray: "6 3" }
+  });
+  var loadNyAssemblyMembers = makeCached(function () { return fetchJSONWithRetry("data/app/ny-assembly-members.json", {}, 2); });
+  registerIlgaChamber({
+    id: "state-assembly", label: "NY State Assembly District", layerIndex: 2,
+    districtFields: ["sldl", "sldlst"],
+    loadRoster: function () { return loadNyAssemblyMembers(); },
+    memberLabel: "Assembly Member", capitolLabel: "Albany Office",
+    directoryUrl: "https://nyassembly.gov/mem/",
+    profileLabel: "Member's page", directoryLabel: "NY Assembly directory",
+    style: { color: "#7C2D12", weight: 2, fillColor: "#C2410C", fillOpacity: 0.05, dashArray: "4 4" },
+    onToggle: function (on) {
+      // cascade the Election District sub-layer off when Assembly is turned off
+      if (!on && state.layersOn["election-district"]) {
+        var box = document.getElementById("toggle-election-district");
+        if (box && box.checked) box.click();
+      }
+    }
+  });
+
+  /* ---------- Election District (~4,200, sub-selection of Assembly) — DCP ArcGIS ----------
+   * The ballot-counting unit; `ElectDist` encodes AD*1000 + ED (23001 = AD 23,
+   * ED 1). Too many features for one Socrata/ArcGIS response, so the loader
+   * pages. subOf:"state-assembly" nests + frames it (same as police-sector). */
+  function loadArcGISPaged(layerUrl, outFields) {
+    var PAGE = 1000;
+    function page(offset, acc) {
+      var url = layerUrl + "/query?where=1%3D1&outFields=" + encodeURIComponent(outFields || "*") +
+        "&outSR=4326&f=geojson&geometryPrecision=6&resultRecordCount=" + PAGE + "&resultOffset=" + offset;
+      return fetchJSONWithRetry(url, { timeoutMs: REMOTE_GEOJSON_TIMEOUT_MS }, 2).then(function (gj) {
+        var feats = (gj && gj.features) || [];
+        acc = acc.concat(feats);
+        var more = gj && (gj.exceededTransferLimit || (gj.properties && gj.properties.exceededTransferLimit));
+        if (more && feats.length === PAGE) return page(offset + feats.length, acc);
+        return { type: "FeatureCollection", features: acc };
+      });
+    }
+    return page(0, []);
+  }
+  var ELECTION_DISTRICTS_SERVICE = "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Election_Districts/FeatureServer/0";
+  var loadElectionDistricts = makeCached(function () { return loadArcGISPaged(ELECTION_DISTRICTS_SERVICE, "ElectDist"); });
+  function splitElectDist(v) {
+    if (v == null) return null;
+    var e = parseInt(v, 10);
+    if (isNaN(e)) return null;
+    return { ad: Math.floor(e / 1000), ed: e % 1000 };
+  }
+  registerLayer({
+    id: "election-district", group: "political", subOf: "state-assembly", label: "Election District",
+    hoverName: function (feature) {
+      var s = splitElectDist(findPropCI(feature.properties || {}, ["electdist"]));
+      return s ? ("AD " + s.ad + " · ED " + s.ed) : null;
+    },
+    overlay: { load: loadElectionDistricts, style: { color: "#3A0CA3", weight: 0.5, fillColor: "#4361EE", fillOpacity: 0.12, dashArray: null } },
+    query: function (point, seq) {
+      return loadElectionDistricts().then(function (gj) {
+        var f = findFeatureContaining(gj, point);
+        if (!f) return null;
+        var s = splitElectDist(findPropCI(f.properties || {}, ["electdist"]));
+        if (!s) return null;
+        return { seq: seq, ad: s.ad, ed: s.ed };
+      });
+    },
+    render: function (result) {
+      return renderFieldList([
+        { label: "Election District", value: "ED " + result.ed + " (AD " + result.ad + ")" },
+        { label: "What it is", value: "The ballot-counting unit, nested within State Assembly District " + result.ad + "." }
+      ]);
+    },
+    onToggle: function (on) {
+      var parentRt = layerRuntime["state-assembly"];
+      if (on) {
+        if (!state.layersOn["state-assembly"]) {
+          var box = document.getElementById("toggle-state-assembly");
+          if (box && !box.checked) box.click();
+        }
+        if (parentRt) parentRt.outlineOnly = true;
+      } else if (parentRt) {
+        parentRt.outlineOnly = false;
+      }
+    }
+  });
+
+  /* ---------- Borough President + District Attorney — shared borough geometry ----------
+   * Both cover the 5 counties (the borough static anchor from Thread 1). The 10
+   * officeholders (5 BP + 5 DA) are operator-supplied in borough-officials.json
+   * (§11.3, hand-verified) — empty until then, so the card names no one and
+   * links to the NYC Green Book, the authoritative official directory. */
+  var loadBoroughOfficials = makeCached(function () { return fetchJSONWithRetry("data/app/borough-officials.json", {}, 2); });
+  var GREEN_BOOK_URL = "https://a856-gbol.nyc.gov/GBOLWebsite/GreenBook/index";
+  function registerBoroughOfficeLayer(opts) {
+    registerLayer({
+      id: opts.id, group: "political", label: opts.label,
+      overlay: { load: loadBoroughBoundaries, style: opts.style },
+      query: function (point, seq) {
+        return Promise.all([loadBoroughBoundaries(), loadBoroughOfficials().catch(function () { return {}; })]).then(function (r) {
+          var gj = r[0], officials = r[1] || {};
+          var f = findFeatureContaining(gj, point);
+          if (!f) return null;
+          var p = f.properties || {};
+          var boro = findPropCI(p, ["boroname"]);
+          var row = boro ? officials[boro] : null;
+          return { seq: seq, boro: boro, county: findPropCI(p, ["county"]), person: (row && row[opts.role]) || null };
+        });
+      },
+      render: function (result) {
+        var fields = [{ label: "Borough", value: result.boro ? String(result.boro) : "Unknown" }];
+        if (opts.role === "da" && result.county) fields.push({ label: "County", value: String(result.county) + " County" });
+        if (result.person) fields.push({ label: opts.label, value: String(result.person.name) });
+        var url = (result.person && result.person.url) ? safeHttpUrl(result.person.url) : null;
+        fields.push({
+          label: result.person ? (opts.label + " website") : "Official directory",
+          html: '<a href="' + sanitize(url || GREEN_BOOK_URL) + '" target="_blank" rel="noopener">' + (url ? sanitize(url) : "NYC Green Book") + '</a>'
+        });
+        return renderFieldList(fields);
+      }
+    });
+  }
+  registerBoroughOfficeLayer({
+    id: "borough-president", label: "Borough President", role: "bp",
+    style: { color: "#7A5901", weight: 2.5, fillColor: "#B8860B", fillOpacity: 0.04 }
+  });
+  registerBoroughOfficeLayer({
+    id: "district-attorney", label: "District Attorney", role: "da",
+    style: { color: "#6B4E8C", weight: 2.5, fillColor: "#8C6A2E", fillOpacity: 0.04, dashArray: "3 3" }
+  });
+
+
+  /* =========================================================================
    * GEO UTILITIES — nearest-N proximity (haversine) + representative points
    * for point datasets (police/fire stations, school sites) that resolve by
    * straight-line distance instead of point-in-polygon.
@@ -3665,9 +3920,25 @@
     if (!lines || !lines.length) return null;
     return lines.map(sanitize).join("<br>");
   }
+  // Extract a geocodable street address from an office's address lines (an array
+  // of strings): drop phone/fax lines, keep the street + city/zip. Used by
+  // registerIlgaChamber's pointOfInterest when a roster supplies office lines.
+  function officeAddressForGeocode(lines) {
+    if (!lines || !lines.length) return null;
+    var kept = lines.filter(function (l) {
+      return !/(?:phone|fax|tel|\(\d{3}\)|\d{3}[-.\s]\d{4})/i.test(String(l));
+    });
+    var addr = (kept.length ? kept : lines).join(", ").trim();
+    return addr || null;
+  }
 
   function registerIlgaChamber(opts) {
-    // opts: id, label, layerIndex, districtFields, ilgaUrl, roster, memberLabel, style
+    // A TIGERweb legislative chamber (Congress / State Senate / State Assembly)
+    // joined to a same-origin roster keyed by district number. opts: { id, label,
+    // layerIndex, districtFields, loadRoster, memberLabel, style, directoryUrl,
+    // profileLabel?, directoryLabel?, capitolLabel? }. Member rows are
+    // { name, party?, url?, districtOffice?, capitolOffice? }; office fields only
+    // render when the roster supplies them (empty placeholder -> just the link).
     var loadChamber = makeCached(function () { return loadTigerLayer(opts.layerIndex); });
     registerLayer({
       id: opts.id,
@@ -3697,14 +3968,14 @@
           // District office first (it's the local, on-map one this card pins),
           // Springfield second. The pin color ties the District Office address
           // to the teardrop marker dropped at the same spot on the map.
-          var district_ = officeFieldHtml(member.districtOffice);
-          if (district_) fields.push({ label: "District Office", html: district_, pin: opts.style.color });
-          var springfield = officeFieldHtml(member.springfieldOffice);
-          if (springfield) fields.push({ label: "Springfield Office", html: springfield });
+          var districtOfficeHtml = officeFieldHtml(member.districtOffice);
+          if (districtOfficeHtml) fields.push({ label: "District Office", html: districtOfficeHtml, pin: opts.style.color });
+          var capitolHtml = officeFieldHtml(member.capitolOffice || member.springfieldOffice);
+          if (capitolHtml) fields.push({ label: opts.capitolLabel || "Capitol Office", html: capitolHtml });
         }
-        var profileUrl = member && member.url ? member.url : opts.ilgaUrl;
+        var profileUrl = member && member.url ? member.url : (opts.directoryUrl || opts.ilgaUrl);
         fields.push({
-          label: member ? "ILGA profile" : "ILGA member directory",
+          label: member ? (opts.profileLabel || "Member profile") : (opts.directoryLabel || "Member directory"),
           html: '<a href="' + sanitize(profileUrl) + '" target="_blank" rel="noopener">' + sanitize(profileUrl) + '</a>'
         });
         return renderFieldList(fields);

@@ -41,7 +41,7 @@ const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
 const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn)
 const WATER = "40.7223,-73.9697"; // mid-East-River — legitimately no borough
 const OFFLINE = ["borough", "judicial-district", "municipal-court"];
-const EXPECT_LAYERS = 16; // Threads 1–3: + es/ms/hs-zone, school-district, cec, school-site
+const EXPECT_LAYERS = 24; // Threads 1–4: full roster (+ council, community-district, congress, state senate/assembly, election-district, borough-president, district-attorney)
 const BOOT_TIMEOUT = 45000; // Leaflet CDN + first paint on a cold CI runner
 const QUERY_TIMEOUT = 25000;
 
