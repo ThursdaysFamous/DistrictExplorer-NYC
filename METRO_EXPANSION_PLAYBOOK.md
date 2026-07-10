@@ -273,7 +273,7 @@ Every builder that splices text keeps the `js_string()` `</script>` + U+2028/U+2
 
 Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 
-1. 🟡 **Socrata app token** — register one free token and set it two places: the `SOCRATA_APP_TOKEN` constant near the top of `index.html` (public — a throttling id, not a secret) and the `SOCRATA_APP_TOKEN` **repo secret** for the CI scrapers (Thread 5). The `withAppToken()` wiring is in place and is a no-op until the constant is filled. Not required to boot; needed once live-Socrata traffic grows (WAF throttling). **Where:** https://data.cityofnewyork.us → sign in → **Developer Settings → App Tokens → Create New App Token**. Free, instant.
+1. **Socrata app token** — ✅ obtained + wired into the `SOCRATA_APP_TOKEN` constant in `index.html` (2026-07-10); verified live (requests carry `$$app_token=`, bad token → 403). It is public (a throttling id, not a secret), so committing it is correct — do **not** put a Socrata *API Key Secret* here. ⬜ Still to do: add the same value as the `SOCRATA_APP_TOKEN` **repo secret** so the Thread 5 CI scrapers can send it via `X-App-Token`.
 2. 🟡 **Custom domain** — `CNAME` was removed (was a placeholder); re-add it once a domain is owned. `manifest`/`README`/branding are done; `icons/*.png` are still the Chicago placeholders — replace the 192/512 PNGs.
 3. ⬜ **`borough-officials.json`** (Thread 4) — supply 10 names (5 Borough Presidents + 5 District Attorneys) from the official sites, verified by hand, per the honesty rule.
 4. ✅ **Static-file conversions** (Thread 1) — the three anchors are built, validated (≥99.95% / 0 overlaps), and the municipal-court count (28) + City-Hall/Brooklyn ground truth are pinned in `smoke_test.mjs`/`validate_index.py`.
@@ -287,7 +287,7 @@ Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 | Service | Key needed? | Used for | Where to get it |
 |---|---|---|---|
 | **NYC Planning GeoSearch** (geocoder) | **No** — keyless | address search + POI pins | already wired (§6a) |
-| **NYC Open Data / Socrata** | **Recommended** (free app token) | every Socrata layer + CI scrapers | data.cityofnewyork.us → Developer Settings → App Tokens |
+| **NYC Open Data / Socrata** | **App token obtained ✓ + wired** | every Socrata layer + CI scrapers | in `index.html`; add repo secret `SOCRATA_APP_TOKEN` for CI |
 | **U.S. Census TIGERweb / DCP·NYSED ArcGIS** | **No** | legislative + battalion + school-point geometry | — |
 | **congress-legislators** | **No** (public CC0 file) | U.S. House roster | — |
 | **Legistar API** | Optional | City Council roster (HTML scrape works without) | Granicus/Legistar support request |
