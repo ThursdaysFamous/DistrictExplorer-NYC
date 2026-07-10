@@ -23,9 +23,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Scrape NY legislature (Open Legislation API)
+      - name: Scrape NY legislature (Open Legislation API; offices via Open States)
         env:
           NYSENATE_API_KEY: ${{ secrets.NYSENATE_API_KEY }}
+          # Optional: district-office enrichment. Without it, senate/assembly ship
+          # names-only (no address guessed).
+          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
         run: python3 scripts/ny_legislature_scraper.py
 
       - name: Rebuild roster data files

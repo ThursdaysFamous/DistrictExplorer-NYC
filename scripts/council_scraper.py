@@ -32,6 +32,22 @@ def clean_name(alt):
     return name or None
 
 
+def district_office(url):
+    """Extract the 'District Office <address>' from a member's district page."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        html = urllib.request.urlopen(req, timeout=45).read().decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 — the office is an enhancement, never fatal
+        return None
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
+    # capture from after "District Office" up to and including the NY ZIP, so a
+    # trailing "Phone:"/suite/etc. doesn't defeat the match (34 -> most of 51).
+    m = re.search(r"District Office\s+(.+?(?:New York|Bronx|Brooklyn|Queens|Staten Island)?,?\s*NY\s+1\d{4})", text)
+    if not m:
+        return None
+    return re.sub(r"\s{2,}", " ", m.group(1).strip(" ,"))
+
+
 def parse(html):
     parts = re.split(r'href="https://council\.nyc\.gov/district-(\d+)/"', html)
     roster = {}
@@ -61,11 +77,14 @@ def main():
 
     records = {}
     for district, name in roster.items():
+        url = "https://council.nyc.gov/district-%s/" % district
         records[district] = {
             "name": name,
-            "source_url": "https://council.nyc.gov/district-%s/" % district,
+            "office": district_office(url),  # None if the page omits it — never guessed
+            "source_url": url,
             "scraped_at": scraped_at,
         }
+        time.sleep(0.2)  # courteous to council.nyc.gov across 51 pages
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:

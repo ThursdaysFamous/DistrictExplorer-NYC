@@ -281,6 +281,7 @@ Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 6. Optional API keys, both documented upgrades over the HTML scrapes, **neither required at launch**:
    - 🟡 **NY Senate Open Legislation API key** — **obtained by operator (2026-07-10).** It is a **secret** (key-gated, 401 without it): store it as the repo secret **`NYSENATE_API_KEY`** and read it server-side in the Thread 5 NY Senate scraper — **never** place it in `index.html` (public site). Until Thread 5 wires it, nothing consumes it; the nysenate.gov HTML scrape remains the no-key fallback.
    - ⬜ **Legistar API key** (City Council roster — the HTML `People.aspx` scrape works without it). Request from Granicus/Legistar.
+   - 🟡 **Open States v3 API key** (`OPENSTATES_API_KEY`) — **optional**, enriches the **State Senate + Assembly** cards with each member's *district-office address* (structured `offices` data; nysenate.gov/nyassembly.gov are WAF/JS-blocked so we can't scrape them directly). Free key at `openstates.org/accounts/signup`; store it as the repo secret **`OPENSTATES_API_KEY`** (read server-side in `ny_legislature_scraper.py`). Without it the two cards ship **names-only** — no address is ever guessed. The `registerIlgaChamber` factory renders `districtOffice` automatically (inline card pin + geocoded map pin) once the roster carries it.
 
 ### API-key summary (what actually needs a key)
 
@@ -292,6 +293,7 @@ Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 | **congress-legislators** | **No** (public CC0 file) | U.S. House roster | — |
 | **Legistar API** | Optional | City Council roster (HTML scrape works without) | Granicus/Legistar support request |
 | **NY Senate Open Legislation API** | Optional — **key obtained ✓** | State Senate roster (HTML scrape works without) | store as repo secret `NYSENATE_API_KEY`; used in Thread 5 |
+| **Open States v3 API** | Optional | State Senate + Assembly **district-office addresses** (names ship without it) | free key at `openstates.org/accounts/signup`; store as repo secret `OPENSTATES_API_KEY` |
 | GeoClient / Geoservice (NYC) | N/A — **skip** | (server-side only, key-gated; GeoSearch replaces it) | — |
 
 ## 12. Per-thread handoff protocol
@@ -402,3 +404,15 @@ Workflows (staggered, open-PR-never-commit): `update-ny-legislature-roster.yml` 
 **Operator, for CI (§11):** add two repo secrets — `SOCRATA_APP_TOKEN` (NYPD scrape) and `NYSENATE_API_KEY` (NY legislature scrape). Without them those two weekly workflows fail at the scrape step; the rest run without secrets.
 
 _Next: Thread 6 — assembly & audit (final `LAYER_AREA_RANK` visual pass, the `sw.js` exactly-one-list invariant check in `validate_index.py`, a11y/attribution, deploy). Optional: confirm the CEC council-page URL map so `cec_scraper.py` resolves; operator fills `borough_officials_source.json`._
+
+### Fix — Political office addresses + map pins (2026-07-10, branch `claude/nyc-political-addresses`)
+
+The political cards showed name + district but (unlike the safety/school cards) no office address, inline card-pin icon, or map pin. Added them where an office source exists:
+
+- `community-district` — the live `ruf7-3wgc` data already carries `cb_office_address` (+ `cb_address_line_2`); surfaced it as a "Board Office" field with the inline pin + a `pointOfInterest` map pin (Manhattan CB 1 → 1 Centre Street, Room 2202-N).
+- `congress` — `build_congress_roster.py` now joins `legislators-district-offices.json` (address + lat/lng) and adds `districtOffice` to each rep; `registerIlgaChamber` renders it with pin + POI automatically (NY-10 → 290 Broadway Suite 291). 26/26.
+- `council` — `council_scraper.py` now fetches each `council.nyc.gov/district-N` page and extracts the "District Office" address; the module renders it with pin + POI. 51/51.
+- `state-senate` / `state-assembly` — **wired via Open States v3** (`ny_legislature_scraper.py` → optional `openstates_offices()`; needs the free `OPENSTATES_API_KEY`, §11.6). The direct sources are unusable (Open Legislation API exposes no offices; nysenate.gov is WAF-403; nyassembly.gov renders addresses via JS, empty in static HTML), so we pull the structured `offices` array from Open States, prefer the `district` office, and pass it through `build_ny_roster.py` as `districtOffice`. `registerIlgaChamber` renders it with pin + POI automatically. **The key is not set in this sandbox, so the shipped roster is still names-only** — the addresses populate the moment the operator adds the repo secret and the weekly workflow reruns (or `OPENSTATES_API_KEY=… python3 scripts/ny_legislature_scraper.py && python3 scripts/build_ny_roster.py` locally). Enrichment is best-effort: on missing key or any error it degrades to names-only, never guessing.
+- **Deferred:** Borough President / District Attorney offices come with the operator's `borough-officials.json`; Judicial / Civil Court / Election District have no single office by design.
+
+Verified headless: address + inline pin icon + map POI pin render for community-district/congress/council; the state-leg wiring was verified with a `districtOffice` fixture (SD 27 → 250 Broadway Suite 2011 renders inline pin + map pin). smoke + `validate_index.py` pass.
