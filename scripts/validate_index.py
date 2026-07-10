@@ -62,14 +62,17 @@ GEOMETRY_FILES = {
 # an empty placeholder until its Thread 5 scrape, so it only has to be a JSON
 # object (min 0). The floor is raised once the scrape lands.
 ROSTER_FILES = {
-    "nypd-precinct-info.json": 0,
-    "cec-members.json": 0,
-    # Congress ships a real roster (26 NY U.S. House reps from congress-legislators);
-    # the rest are empty placeholders until their Thread 5 scrapes.
+    # Thread 5 filled these from live sources; floors guard against a partial
+    # scrape shipping. nypd-precinct-info keys every precinct (even a null CO), so
+    # its floor is the precinct count, not the commander count.
+    "nypd-precinct-info.json": 70,
     "congress-roster.json": 26,
-    "council-members.json": 0,
-    "ny-senate-members.json": 0,
-    "ny-assembly-members.json": 0,
+    "council-members.json": 48,
+    "ny-senate-members.json": 60,
+    "ny-assembly-members.json": 145,
+    # CEC + borough-officials remain placeholders (Playwright scrape / operator
+    # input, §9/§11.3), so they only have to be a JSON object.
+    "cec-members.json": 0,
     "borough-officials.json": 0,
 }
 
