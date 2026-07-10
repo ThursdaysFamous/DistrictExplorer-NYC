@@ -20,6 +20,12 @@ Checks (all must pass; exits non-zero on the first failure):
   3. index.html embeds no dataset inline (no `JSON.parse('...')` blobs remain)
      and references each data/app/* file it fetches.
   4. Every expected data/app/*.json exists, parses, and has the right shape.
+  5. LAYER_AREA_RANK lists every registered layer id exactly once and nothing
+     else — the z-order honesty rule (§3/§7) made executable so a layer can
+     never be registered but forgotten in the stack (or vice versa).
+  6. sw.js exactly-one-list invariant (§4): every data/app/*.json on disk is
+     cached in exactly one of the service worker's GEOMETRY_URLS / ROSTER_URLS,
+     so no data file is ever un-cached or double-listed.
 
 Usage:
     python3 scripts/validate_index.py [path/to/index.html]
@@ -113,6 +119,27 @@ def main():
         if ('id: "%s"' % lid) not in html:
             fail('layer id "%s" is not registered in index.html' % lid)
 
+    # 2b. LAYER_AREA_RANK covers every registered id exactly once, and nothing
+    # else (no "stub", no dropped layer). This is the z-order "final visual
+    # pass" (§7) made executable: reorderActiveLayers() walks this list, so a
+    # registered layer missing here never gets restacked, and a stale id here
+    # is a silent no-op that hides a rename.
+    m = re.search(r"var LAYER_AREA_RANK = \[(.*?)\];", html, re.DOTALL)
+    if not m:
+        fail("LAYER_AREA_RANK array not found in index.html")
+    rank = re.findall(r'"([a-z0-9-]+)"', m.group(1))
+    dupes = sorted(set(x for x in rank if rank.count(x) > 1))
+    if dupes:
+        fail("LAYER_AREA_RANK lists these ids more than once: %s" % ", ".join(dupes))
+    expected = set(EXPECT_LAYER_IDS)
+    got = set(rank)
+    missing = sorted(expected - got)
+    extra = sorted(got - expected)
+    if missing:
+        fail("LAYER_AREA_RANK is missing registered layer id(s): %s" % ", ".join(missing))
+    if extra:
+        fail("LAYER_AREA_RANK has id(s) not in the registered set: %s" % ", ".join(extra))
+
     # 3. nothing embedded inline anymore, and every data file is referenced
     blobs = re.findall(r"var (\w+) = JSON\.parse\('", html)
     if blobs:
@@ -149,10 +176,56 @@ def main():
         if len(roster) < min_keys:
             fail("data/app/%s has %d entries, expected at least %d" % (fname, len(roster), min_keys))
 
+    # 5. sw.js exactly-one-list invariant (§4): every data/app/*.json on disk
+    # must be cached in exactly one of GEOMETRY_URLS (cache-first) or ROSTER_URLS
+    # (network-first). A boundary served network-first would be a needless fetch;
+    # a roster served cache-first could name a stale officeholder — the cardinal
+    # sin here. An un-listed file silently loses offline support.
+    check_sw_lists(repo_root, app_dir)
+
     print(
         "validate_index: OK — inline script parses, %d registerLayer( calls, "
-        "no inline datasets, all data/app files present and well formed" % n
+        "LAYER_AREA_RANK covers all %d ids, no inline datasets, all data/app "
+        "files present and cached in exactly one sw.js list" % (n, len(EXPECT_LAYER_IDS))
     )
+
+
+def _sw_url_list(sw, name):
+    """Extract the ./data/app/*.json basenames from a `const NAME = [...]` array."""
+    m = re.search(r"const %s = \[(.*?)\];" % name, sw, re.DOTALL)
+    if not m:
+        fail("sw.js: %s array not found" % name)
+    return re.findall(r'\./data/app/([A-Za-z0-9._-]+\.json)', m.group(1))
+
+
+def check_sw_lists(repo_root, app_dir):
+    sw_path = os.path.join(repo_root, "sw.js")
+    if not os.path.exists(sw_path):
+        fail("sw.js not found next to index.html")
+    sw = open(sw_path).read()
+    geometry = _sw_url_list(sw, "GEOMETRY_URLS")
+    roster = _sw_url_list(sw, "ROSTER_URLS")
+
+    # No file appears in both lists.
+    both = sorted(set(geometry) & set(roster))
+    if both:
+        fail("sw.js: file(s) in BOTH GEOMETRY_URLS and ROSTER_URLS: %s" % ", ".join(both))
+
+    listed = geometry + roster
+    dupes = sorted(set(x for x in listed if listed.count(x) > 1))
+    if dupes:
+        fail("sw.js: file(s) listed more than once: %s" % ", ".join(dupes))
+
+    # Every listed file exists on disk.
+    for fname in listed:
+        if not os.path.exists(os.path.join(app_dir, fname)):
+            fail("sw.js caches data/app/%s but the file does not exist" % fname)
+
+    # Every data/app/*.json on disk is cached in exactly one list.
+    on_disk = set(f for f in os.listdir(app_dir) if f.endswith(".json"))
+    uncached = sorted(on_disk - set(listed))
+    if uncached:
+        fail("data/app file(s) not cached in any sw.js list: %s" % ", ".join(uncached))
 
 
 if __name__ == "__main__":

@@ -416,3 +416,16 @@ The political cards showed name + district but (unlike the safety/school cards) 
 - **Deferred:** Borough President / District Attorney offices come with the operator's `borough-officials.json`; Judicial / Civil Court / Election District have no single office by design.
 
 Verified headless: address + inline pin icon + map POI pin render for community-district/congress/council; the state-leg wiring was verified with a `districtOffice` fixture (SD 27 → 250 Broadway Suite 2011 renders inline pin + map pin). smoke + `validate_index.py` pass.
+
+### Thread 6 — Assembly & audit — DONE (2026-07-10, branch `claude/nyc-thread-6-assembly`)
+
+Final assembly pass over the fully-populated 24-layer app. No new layers — this thread hardens the invariants that the module threads only checked by eye.
+
+- **`LAYER_AREA_RANK` audit → executable.** All 24 registered ids appear exactly once in the z-order stack, in the §7 order (beat-rule exceptions intact: `election-district` before `state-assembly`, `police-sector` before `police-precinct`; points topmost). `validate_index.py` now cross-checks `LAYER_AREA_RANK` against the registered id set — a registered-but-unstacked layer (or a stale id) now fails the gate instead of silently mis-rendering. Negative-tested both directions.
+- **`sw.js` exactly-one-list invariant → executable.** The §4 rule ("every `data/app/` file in exactly one of GEOMETRY_URLS / ROSTER_URLS") is now enforced in `validate_index.py`: it parses both sw.js arrays and fails on a file that's double-listed, in neither, or missing from disk. All 10 data files map cleanly (3 boundaries cache-first, 7 rosters network-first). Negative-tested (both-list case caught).
+- **`EXPECT_LAYERS = 24`** — confirmed at runtime by the smoke test (counts `input[id^=toggle-]`; found 24), not just asserted.
+- **a11y** — verified the carried-over scaffolding is intact: `map` `role=application` + descriptive label, search `role=search` with associated (visually-hidden) label, results `aria-live=polite`, layer toggles built as `<label for=toggle-id>`+checkbox with decorative color-dots `aria-hidden`, banners `role=status`, feedback `role=dialog aria-modal`. No gaps found.
+- **Attribution** — added the three now-active sources missing from the footer: NYC ArcGIS (fire battalions + election districts), NYS Education Dept (school districts), and Open States (state-leg offices). Basemap tiles already carry on-map OSM + CARTO attribution.
+- **Deploy** — GitHub Pages deploys from `main` on merge (existing `Deploy to GitHub Pages` workflow); CNAME `nyc.chidistricts.com`. All 10 smoke checks + `validate_index.py` (now 6 checks) green.
+
+Operator items still open (unchanged, §11): enable "Allow GitHub Actions to create and approve PRs"; add repo secrets `SOCRATA_APP_TOKEN` + `NYSENATE_API_KEY` (+ optional `OPENSTATES_API_KEY` for state-leg office addresses); replace placeholder `icons/app/*.png`; fill `borough_officials_source.json`; confirm CEC page URLs.
