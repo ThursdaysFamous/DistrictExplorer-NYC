@@ -4,6 +4,8 @@ The reference-of-truth for recreating this app for another large metro. **Chicag
 
 Part I is the generic recipe (what any city swaps, in what order). Part II is the NYC worked example, researched and source-verified July 10, 2026 — every endpoint labeled **VERIFIED** below was actually fetched that day with real records observed; **UNVERIFIED** means the source was found but not confirmed. Reverify before relying: dataset IDs, field names, and WAF postures drift.
 
+Part I has now survived one full port: the NYC build (Threads 0–6 plus the first live roster refresh) is complete, and every generalizable lesson its Status log recorded as a SURPRISE has been folded back into Part I. The next metro starts from the amended recipe; the log at the bottom is evidence, not required reading.
+
 Same working style as `BUILD_PLAYBOOK_1.md`: build in small, cheap, focused threads; paste only this playbook's contract + the one module being worked on into a thread, never the whole app.
 
 ---
@@ -13,6 +15,8 @@ Same working style as `BUILD_PLAYBOOK_1.md`: build in small, cheap, focused thre
 ## 1. What the fork keeps vs. rewrites
 
 `index.html` (4,608 lines as of July 2026) is roughly **60–65% metro-agnostic engine**: the map boot, layer registry + result-card framework, `state`/`sequence` machinery, URL-hash permalinks, hover explorer, highlight/reorder machinery, and the shared utilities (`sanitize`, `pointInGeometry`, `fetchJSONWithRetry`, `haversineMiles`, `findPropCI`, the Socrata/ArcGIS loaders and caching wrappers). All of that ports untouched. What a new metro rewrites is the ~1,500 lines of layer modules (≈ lines 2712–4263) plus a fixed, enumerable set of hardcoded core values.
+
+**Re-core surgery notes (paid for in NYC Threads 0 and 4):** the module lines are *not* contiguous — the four factories and the shared Socrata/ArcGIS/TIGERweb loaders are interleaved with the reference city's `registerXxx({…})` registration blocks. Delete only the registration call blocks and their city-specific preamble; keep every factory and loader. Then **grep each kept factory for helpers that no longer exist**: NYC's kept `registerIlgaChamber` still called a deleted Chicago helper (`officeAddressForGeocode`), and nothing crashed until the first *real* roster landed two threads later — empty-placeholder rosters never exercise those code paths, so placeholder data hides dangling references. The systematic antidote is §3 step 6's land-one-real-roster-early rule.
 
 **Core constants to swap (line anchors verified against the July 2026 tree — re-locate by name if drifted):**
 
@@ -75,10 +79,11 @@ Also reusable as-is: the `ward` module's two-live-datasets join (boundary + rost
 2. **Swap the §1 core constants** and branding; rename the debug namespace in both files or leave it.
 3. **Decide the layer roster** for your city: walk Chicago's 22 layers, map each to the local equivalent, and be explicit where **no honest analog exists** — drop the layer rather than invent geometry or names for an appointed/citywide body. Add local layers Chicago lacks. Then write the full `LAYER_AREA_RANK`, largest→smallest. **Rule: every registered layer id appears in the rank, no exceptions** — an id missing from the list is invisible to both consumers of the rank: `reorderActiveLayers` (`index.html:1887`) never restacks it, and `hoverContainingLayers` (`index.html:4291`) omits it from hover civic profiles entirely. (Chicago itself shipped this bug — `ward-precinct` was missing from the rank until it was fixed alongside this playbook.) Sub-layers deliberately rank just *before* their parent so the parent outline frames the fills — see the police-beat comment in the Chicago rank.
 4. **Build the data registry** (Part II §6 is the model): one row per layer, geometry source + roster source, each labeled VERIFIED only after a live fetch you performed. Record dataset IDs, exact query URLs, and observed field names.
-5. **Pick the offline anchors** (§4) and the smoke-test ground-truth points.
-6. **Map the pipeline**: for each roster, which scraper/builder pair template applies, which fetch engine, and the count guards (§9 is the model).
+5. **Pick the offline anchors** (§4) and the smoke-test ground-truth points — two positive points landing in different districts, plus the §4 negative point where the geography allows one.
+6. **Map the pipeline**: for each roster, which scraper/builder pair template applies, which fetch engine, and the count guards (§9 is the model). Don't defer *every* roster to the pipeline thread: land the cheapest real one (a no-scrape public file, congress-legislators-style) during the modules thread itself — real data flushes factory paths that empty placeholders never exercise (see §1's re-core surgery notes).
 7. **Re-derive every gate constant** (§1's last paragraph) and both `sw.js` lists.
 8. **Swap deploy**: CNAME, manifest, icons, README, footer attribution. The `deploy-pages.yml` rsync exclude list is generic — but confirm nothing city-new (e.g. a large source GeoJSON) slips into the artifact.
+9. **Cross-group parity audit** before calling assembly done: for each field one group's cards render (office address, inline pin, map pin, phone, oversight links), check every other group's cards that *could* carry it. NYC shipped its political cards name-only while the safety and school cards already carried addresses and pins — no gate catches this class of gap; only a deliberate side-by-side pass does.
 
 ## 4. The offline-anchor rule
 
@@ -89,17 +94,24 @@ Chicago ships three layers whose boundaries have no reliable public API as same-
 - `sw.js` serves them **cache-first** (`GEOMETRY_URLS`; boundaries change ~once a decade) vs. **network-first** for rosters (`ROSTER_URLS`; never serve a stale officeholder).
 - `build_embedded_boundaries.py`'s `LAYERS` dict is where they're produced: mapshaper (`npx -y mapshaper@0.6.102`, visvalingam keep-shapes) + the validation protocol below.
 
-**Every metro must pick ≥3 such layers** — prefer boundaries that essentially never change and whose live APIs are absent or unreliable — plus a well-known ground-truth point and a second point that lands in different districts (the re-highlight fast-path check).
+**Every metro must pick ≥3 such layers** — prefer boundaries that essentially never change and whose live APIs are absent or unreliable — plus a well-known ground-truth point and a second point that lands in different districts (the re-highlight fast-path check). Where the geography allows it (water, unincorporated pockets), also pin a **negative point** that honestly resolves to *no district* in at least one layer — NYC's mid-East-River point returns no borough — so the never-snap-to-nearest honesty rule is an executable smoke check, not prose.
 
 **New invariant for forks** (a gap Chicago itself shipped — `ccpsa-district-councils.json` and `congress-roster.json` were fetched by the app but absent from both SW lists until fixed alongside this playbook): **every file in `data/app/` appears in exactly one of `sw.js`'s `GEOMETRY_URLS` or `ROSTER_URLS`**, and the fork's `validate_index.py` checks it. Bump `CACHE_NAME` on every list change.
 
-## 5. Dataset verification protocol (lessons already paid for)
+## 5. Dataset & roster verification protocol (lessons already paid for)
 
 1. **Live-sample field names before wiring a module.** Every Chicago thread that skipped this shipped a wrong guess. Seed `findPropCI` alias lists with all observed candidates.
 2. **The portal-page dataset ID and the geometry-serving ID can differ.** Chicago's ZIP and police-district datasets both 200'd with every geometry `null` on the obvious ID. `loadSocrataGeoJSON` tries three routes (`/resource/{id}.geojson` → `/api/v3/views/{id}/query.geojson` → legacy `method=export`) for exactly this reason; keep that machinery.
 3. **The Socrata "map-type" trap:** older map-type datasets return empty/`null` from `/resource/` **by design** — only `/api/geospatial/{id}?method=export&format=GeoJSON` or a sibling ArcGIS FeatureServer serves them. If a registry row is known map-type, don't burn two failing routes per load: give `loadSocrataGeoJSON` a per-dataset route-order override in the fork (the export route already exists as route 3).
 4. **Simplification validation:** `build_embedded_boundaries.py` reimplements the app's own even-odd point-in-polygon and requires ≥99.5% agreement on 2,000 seeded random points AND zero points classified into >1 district (topology break = hard fail), feature count and properties unchanged. Use it unmodified for the new city's anchors.
-5. **Watch record caps:** Socrata route 1 hardcodes `$limit=1000`; TIGERweb caps transfers (`exceededTransferLimit`) — filter server-side (state/county `where`) or paginate for large layers.
+5. **Watch record caps:** Socrata route 1 hardcodes `$limit=1000`; TIGERweb caps transfers (`exceededTransferLimit`) — filter server-side (state/county `where`) or paginate for large layers. NYC hit this twice (1,591 public school points; 4,214 election districts) — the fork's paged ArcGIS loader (`loadArcGISPaged`) is the reusable fix.
+6. **Point datasets may serve no geometry at all on the geojson route.** Both NYC point sources (FacDB police stations, FDNY firehouses) return nothing usable from `.geojson` — the coordinates live only in `latitude`/`longitude` *properties*. Sample the geometry route for point datasets separately from polygon datasets; the fix is a loader that assembles a real Point FeatureCollection from the `.json` rows (`makeSocrataPointLoader` in the NYC fork, reused by three layers).
+7. **Sample exact values, not just field names.** SoQL `$where` string equality is case-sensitive — `factype='Police Station'` matched **0** rows where `'POLICE STATION'` matched 80 — and numeric-looking fields can arrive as float strings (`schooldist` = `"15.0"`). Record observed *values* alongside field names in the registry, and normalize in the loader so consumers never see the quirk.
+8. **Verify coverage, not existence.** A pattern confirmed on one sample can cover a fraction of the roster: Legistar's member grid carried district URLs for only ~24 of 51 council members (forcing a source switch at build time), and the NYPD precinct pages resolve 74 of 78 commanding officers. When a scrape plan depends on a per-record link or label, count how many of N records actually carry it before committing — and set builder count floors below 100% so honest misses don't wedge the weekly pipeline.
+9. **Freshness checks fire on successors, not age.** "Stale if `rowsUpdatedAt` > 14 months" cried wolf on NYC's school zones, which legitimately go untouched for 2+ years. The real "swap the dataset ID" signal is a newer edition appearing in the portal catalog (or a 404) — alert on that, never on age alone.
+10. **Honesty is per-field, not per-roster.** A source that verifies names may still not publish party or office address (NYC's Open Legislation API covers both chambers but exposes no party; no official page labels it cleanly either). Verify each *field* against a source; store `null` for the rest and render "not published" with a link to where it is published — never backfill a field from a weaker source than the roster itself.
+11. **When the official site is unscrapeable, a maintained open aggregator is the honest fallback for structured fields.** nysenate.gov is WAF-403 and nyassembly.gov renders addresses via JS — but Open States v3 publishes each member's structured `offices` array, exactly as congress-legislators does for U.S. House district offices. The official site stays as the card's link target; the aggregator feeds the structured fields it maintains.
+12. **Ship keyed enrichments dark.** Guard every enrichment that needs an API key so a missing repo secret — or any fetch error — degrades to the unenriched roster instead of blocking it. Proven end-to-end in NYC: the Open States office-address wiring shipped with no key available; when the operator later added `OPENSTATES_API_KEY`, the next live run populated 63/63 Senate + 150/150 Assembly district offices with zero code change (PR #6).
 
 ---
 
@@ -112,7 +124,7 @@ Everything below was researched and (where marked) live-verified **July 10, 2026
 | Layer target | Source | ID / endpoint | Status |
 |---|---|---|---|
 | City Council districts (51) | Socrata | `872g-cjhh` `/resource/872g-cjhh.geojson` | geometry **VERIFIED** (real MultiPolygon); **field names UNVERIFIED** (expect `coundist` — sample before wiring) |
-| Council member roster | Legistar (HTML) | `legistar.council.nyc.gov/People.aspx` | **VERIFIED** — server-rendered 51-row grid; district encoded in member URLs (`/district-N/`). `webapi.legistar.com` REJECTED: Incapsula 403 + key-gated |
+| Council member roster | Legistar (HTML) | `legistar.council.nyc.gov/People.aspx` | **VERIFIED** — server-rendered 51-row grid; district encoded in member URLs (`/district-N/`). **Thread 5 correction: only ~24/51 rows carry that URL (§5.8) — production scrapes council.nyc.gov `/districts/` instead.** `webapi.legistar.com` REJECTED: Incapsula 403 + key-gated |
 | Election districts (~5,000; AD·1000+ED) | DCP ArcGIS | `services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Election_Districts/FeatureServer/0` (`ElectDist`) | **VERIFIED** (sample `ElectDist=23001`). Socrata `h2n3-98hq` is map-type — `/resource/` geometry is null |
 | Community districts (59) | Socrata | `5crt-au7u` `.geojson` (`boro_cd`, e.g. `"410"` = Queens CD 10) | **VERIFIED** |
 | Community Board leadership | Socrata | `ruf7-3wgc` `.json` — `cb_chair`, `cb_district_manager`, office address/phone/email, meeting info | **VERIFIED** — the only machine-readable CB roster; full ~50-member lists are per-borough HTML only (link, don't scrape) |
@@ -248,14 +260,14 @@ Keep the two-stage discipline exactly: scraper writes raw JSON with `source_url`
 
 | Chicago pair | NYC successor | Source | Engine | Count guards | Cron (UTC) |
 |---|---|---|---|---|---|
-| `ilga_scraper.py` + `build_il_roster.py` | `ny_legislature_scraper.py` + `build_ny_roster.py` | nysenate.gov `/senators-committees` + nyassembly.gov `/mem/` | requests+BS4 | 63 senate / 145 assembly; assembly party = `null` | Mon 13:00 |
+| `ilga_scraper.py` + `build_il_roster.py` | `ny_legislature_scraper.py` + `build_ny_roster.py` | **Corrected (Thread 5):** Open Legislation API `/members` (both chambers, repo secret `NYSENATE_API_KEY`) + best-effort Open States v3 office enrichment (`OPENSTATES_API_KEY`, §5.12); the nysenate.gov/nyassembly.gov HTML plan stays as the documented no-key fallback | stdlib urllib | 63 senate / 145 assembly; party = `null` both chambers (API exposes none, §5.10) | Mon 13:00 |
 | `build_congress_roster.py` | same script, re-parameterized | `legislators-current.json` (keep JSON + stdlib urllib — no YAML switch) | stdlib | `"IL"→"NY"`, 17→26; keep whole-state (geometry is whole-state too; `NY-N` labels) | Mon 13:00 |
 | `cpd_district_scraper.py` + `build_cpd_roster.py` | `nypd_precinct_scraper.py` + `build_nypd_roster.py` | nyc.gov precinct pages; loop driven from `y76i-bdw7` `precinct` values | `--engine auto` | 70 precincts / 60 commanding officers | Tue 13:00 |
 | `ccpsa_scraper.py` + `build_ccpsa_roster.py` | `cec_scraper.py` + `build_cec_roster.py` | schools.nyc.gov CEC "Current Members" pages | **Playwright default** | 28 councils / 150 members | Wed 13:00 |
-| — (new) | `legistar_council_scraper.py` + `build_council_roster.py` | Legistar `People.aspx` (district from `/district-N/` URLs) | `--engine auto` | 48 members | Thu 13:00 (new slot) |
+| — (new) | `council_scraper.py` + `build_council_roster.py` | **Corrected (Thread 5):** council.nyc.gov `/districts/` + per-district pages (all 51, incl. district-office addresses); the Legistar `People.aspx` plan was dropped — its district URLs cover only ~24/51 members (§5.8) | stdlib urllib | 48 members | Thu 13:00 (new slot) |
 | — (new, builder only) | `build_borough_officials.py` | operator-maintained source list: 5 BP + 5 DA official sites | n/a | exactly 5 boroughs × 2 offices | manual (elections are quadrennial). Thread-4 chore: one live Green Book fetch to test upgrading this to a scraper |
 | `build_embedded_boundaries.py` | extend `LAYERS` dict | the three §8 anchors | mapshaper via pinned `npx` | existing 2,000-point protocol | operator-run |
-| — (new chore) | `check-school-zone-ids.yml` | `/api/views/{id}.json` metadata for the three zone datasets | requests | opens an **issue** (not a PR) if an ID 404s or `rowsUpdatedAt` goes >14 months stale | monthly |
+| — (new chore) | `check-school-zone-ids.yml` | `/api/views/{id}.json` metadata + catalog search for the three zone datasets | requests | opens an **issue** (not a PR) if an ID 404s **or a newer school-year zones dataset appears in the catalog** (refined in Thread 3 — age alone cries wolf, §5.9) | monthly |
 
 Every builder that splices text keeps the `js_string()` `</script>` + U+2028/U+2029 escaping — that guard closed a real injection bug in Chicago and scraped free text (bios, council pages) is exactly where it matters.
 
@@ -273,27 +285,27 @@ Every builder that splices text keeps the `js_string()` `</script>` + U+2028/U+2
 
 Status keys: ⬜ not started · 🟡 wired, awaiting operator input · ✅ done.
 
-1. **Socrata app token** — ✅ obtained + wired into the `SOCRATA_APP_TOKEN` constant in `index.html` (2026-07-10); verified live (requests carry `$$app_token=`, bad token → 403). It is public (a throttling id, not a secret), so committing it is correct — do **not** put a Socrata *API Key Secret* here. ⬜ Still to do: add the same value as the `SOCRATA_APP_TOKEN` **repo secret** so the Thread 5 CI scrapers can send it via `X-App-Token`.
-2. 🟡 **Custom domain** — `CNAME` was removed (was a placeholder); re-add it once a domain is owned. `manifest`/`README`/branding are done; `icons/*.png` are still the Chicago placeholders — replace the 192/512 PNGs.
+1. **Socrata app token** — ✅ obtained + wired into the `SOCRATA_APP_TOKEN` constant in `index.html` (2026-07-10); verified live (requests carry `$$app_token=`, bad token → 403). It is public (a throttling id, not a secret), so committing it is correct — do **not** put a Socrata *API Key Secret* here. ✅ Also stored as the `SOCRATA_APP_TOKEN` **repo secret** (confirmed by operator 2026-07-10) so the Thread 5 CI scrapers send it via `X-App-Token` — all five weekly workflows now have every secret they need.
+2. 🟡 **Custom domain + icons** — `CNAME` ✅ set to `nyc.chidistricts.com` (operator-owned subdomain, Thread 2); `manifest`/`README`/branding done; borough-seal selection markers + ferry pin landed via PR #2 (`icons/boroughs/`, `icons/app/ferry.png`). ⬜ The PWA icons `icons/app/icon-{192,512}.png` are still the Chicago placeholders — replace them.
 3. ⬜ **`borough-officials.json`** (Thread 4) — supply 10 names (5 Borough Presidents + 5 District Attorneys) from the official sites, verified by hand, per the honesty rule.
 4. ✅ **Static-file conversions** (Thread 1) — the three anchors are built, validated (≥99.95% / 0 overlaps), and the municipal-court count (28) + City-Hall/Brooklyn ground truth are pinned in `smoke_test.mjs`/`validate_index.py`.
 5. ⬜ One live fetch of the Green Book (`a856-gbol.nyc.gov`) to assess upgrading `borough-officials` to a scraper (Thread 4).
 6. Optional API keys, both documented upgrades over the HTML scrapes, **neither required at launch**:
-   - 🟡 **NY Senate Open Legislation API key** — **obtained by operator (2026-07-10).** It is a **secret** (key-gated, 401 without it): store it as the repo secret **`NYSENATE_API_KEY`** and read it server-side in the Thread 5 NY Senate scraper — **never** place it in `index.html` (public site). Until Thread 5 wires it, nothing consumes it; the nysenate.gov HTML scrape remains the no-key fallback.
+   - ✅ **NY Senate Open Legislation API key** — obtained, stored as the repo secret **`NYSENATE_API_KEY`**, wired in Thread 5 (`ny_legislature_scraper.py` reads it server-side — **never** place it in `index.html`, it is a real secret: key-gated, 401 without it), and consumed by the first live roster run (PR #6).
    - ⬜ **Legistar API key** (City Council roster — the HTML `People.aspx` scrape works without it). Request from Granicus/Legistar.
-   - 🟡 **Open States v3 API key** (`OPENSTATES_API_KEY`) — **optional**, enriches the **State Senate + Assembly** cards with each member's *district-office address* (structured `offices` data; nysenate.gov/nyassembly.gov are WAF/JS-blocked so we can't scrape them directly). Free key at `openstates.org/accounts/signup`; store it as the repo secret **`OPENSTATES_API_KEY`** (read server-side in `ny_legislature_scraper.py`). Without it the two cards ship **names-only** — no address is ever guessed. The `registerIlgaChamber` factory renders `districtOffice` automatically (inline card pin + geocoded map pin) once the roster carries it.
+   - ✅ **Open States v3 API key** (`OPENSTATES_API_KEY`) — obtained, stored as the repo secret, and **live**: the first roster run after the secret landed populated district-office address + phone for **63/63 Senate and 150/150 Assembly** members (PR #6); `registerIlgaChamber` renders each with the inline card pin + geocoded map pin. The enrichment stays best-effort (§5.12) — on a missing key or any error it degrades to names-only, never guessing.
 
 ### API-key summary (what actually needs a key)
 
 | Service | Key needed? | Used for | Where to get it |
 |---|---|---|---|
 | **NYC Planning GeoSearch** (geocoder) | **No** — keyless | address search + POI pins | already wired (§6a) |
-| **NYC Open Data / Socrata** | **App token obtained ✓ + wired** | every Socrata layer + CI scrapers | in `index.html`; add repo secret `SOCRATA_APP_TOKEN` for CI |
+| **NYC Open Data / Socrata** | **App token obtained ✓ + wired** | every Socrata layer + CI scrapers | in `index.html` + repo secret `SOCRATA_APP_TOKEN` ✓ |
 | **U.S. Census TIGERweb / DCP·NYSED ArcGIS** | **No** | legislative + battalion + school-point geometry | — |
 | **congress-legislators** | **No** (public CC0 file) | U.S. House roster | — |
 | **Legistar API** | Optional | City Council roster (HTML scrape works without) | Granicus/Legistar support request |
-| **NY Senate Open Legislation API** | Optional — **key obtained ✓** | State Senate roster (HTML scrape works without) | store as repo secret `NYSENATE_API_KEY`; used in Thread 5 |
-| **Open States v3 API** | Optional | State Senate + Assembly **district-office addresses** (names ship without it) | free key at `openstates.org/accounts/signup`; store as repo secret `OPENSTATES_API_KEY` |
+| **NY Senate Open Legislation API** | **Obtained + wired ✓** | State Senate + Assembly roster (Thread 5; first live run = PR #6) | repo secret `NYSENATE_API_KEY` |
+| **Open States v3 API** | **Obtained + wired ✓** | State Senate + Assembly **district-office addresses** — live, 63 + 150 (degrades to names-only without it) | repo secret `OPENSTATES_API_KEY` (free at `openstates.org/accounts/signup`) |
 | GeoClient / Geoservice (NYC) | N/A — **skip** | (server-side only, key-gated; GeoSearch replaces it) | — |
 
 ## 12. Per-thread handoff protocol
@@ -429,3 +441,11 @@ Final assembly pass over the fully-populated 24-layer app. No new layers — thi
 - **Deploy** — GitHub Pages deploys from `main` on merge (existing `Deploy to GitHub Pages` workflow); CNAME `nyc.chidistricts.com`. All 10 smoke checks + `validate_index.py` (now 6 checks) green.
 
 Operator items still open (unchanged, §11): enable "Allow GitHub Actions to create and approve PRs"; add repo secrets `SOCRATA_APP_TOKEN` + `NYSENATE_API_KEY` (+ optional `OPENSTATES_API_KEY` for state-leg office addresses); replace placeholder `icons/app/*.png`; fill `borough_officials_source.json`; confirm CEC page URLs.
+
+### Roster refresh #1 + playbook generalization — DONE (2026-07-10, branch `claude/metro-expansion-playbook-e3rpzi`)
+
+The pipeline completed its first live cycle, and this pass folds every generalizable lesson from the NYC build back into Part I so the next metro inherits the amended recipe instead of re-mining this log.
+
+- `pipeline` DONE — `update-ny-legislature-roster.yml` ran with the operator's `NYSENATE_API_KEY` + `OPENSTATES_API_KEY` secrets and opened **PR #6** (bot-authored, human-reviewed, merged): the open-PR-never-commit shape carried from Chicago is now proven end-to-end on NYC. The Senate (63/63) and Assembly (150/150) rosters carry `districtOffice` (address + phone) — the enrichment that shipped dark in the addresses fix populated with **zero code change** once the secrets landed (§5.12, made real). Party remains `null` everywhere (§5.10).
+- `playbook` DONE — generalization pass: §5 retitled "Dataset & roster verification protocol" and extended with lessons 6–12 (point-geometry route, exact-value sampling, coverage-not-existence, successor-not-age freshness, per-field honesty, aggregator fallback, ship-enrichments-dark); §1 gained the re-core surgery notes (interleaved factories; the dangling-helper trap); §3 gained the land-one-real-roster-early rule (step 6) and the cross-group card-parity audit (step 9); §4 gained the negative ground-truth point; §11 statuses refreshed (CNAME ✅ `nyc.chidistricts.com`; both state-legislature keys ✅ wired). `README.md` brought current (pipeline live, layers no longer "planned", operator list trimmed).
+- SURPRISE — Thread 6 landed on `main` (PR #7) mid-pass, closing the two gate items this entry originally tracked as open (`LAYER_AREA_RANK` cross-check and the §4 sw.js exactly-one-list invariant are now executable in `validate_index.py`). Its closing operator list restated stale §11 state, corrected here by evidence from PR #6: the PR was **opened by `github-actions[bot]`** (Actions PR-creation already enabled) and its roster carries API + Open States data (`NYSENATE_API_KEY` + `OPENSTATES_API_KEY` already set). Actually remaining for the operator (§11): replace the Chicago PWA icons (`icons/app/icon-{192,512}.png`), fill `borough_officials_source.json`, confirm the CEC per-council URL map. (`SOCRATA_APP_TOKEN` was subsequently confirmed as a repo secret too — all five weekly workflows are fully keyed.)
