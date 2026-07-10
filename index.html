@@ -660,14 +660,16 @@
     align-items: center;
     gap: 8px;
   }
-  .footer-sources-label {
+  .footer-sources-label,
+  .footer-metros-label {
     font-family: var(--font-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--slate-soft);
   }
-  .footer-sources a {
+  .footer-sources a,
+  .footer-metros a {
     color: #C9D4DB;
     text-decoration: none;
     border: 1px solid rgba(217,225,231,0.22);
@@ -675,10 +677,22 @@
     padding: 3px 11px;
     transition: color .12s, border-color .12s, background .12s;
   }
-  .footer-sources a:hover {
+  .footer-sources a:hover,
+  .footer-metros a:hover {
     color: #fff;
     border-color: var(--nyc-blue);
     background: rgba(65,182,230,0.14);
+  }
+
+  /* ---- footer metros: links to the sibling District Explorer deployments ---- */
+  .footer-metros {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(217,225,231,0.15);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
   }
 
   /* ---- footer links: feedback + repo + parent domain ---- */
@@ -1041,6 +1055,10 @@
       <a href="https://github.com/ThursdaysFamous/DistrictExplorer-NYC" target="_blank" rel="noopener">View source on GitHub</a>
       <a href="https://overberg.co" target="_blank" rel="noopener">overberg.co</a>
       <a href="https://github.com/sponsors/ThursdaysFamous" target="_blank" rel="noopener">💛 Support this project</a>
+    </div>
+    <div class="footer-metros" id="footer-metros" hidden>
+      <span class="footer-metros-label">Explore another metro</span>
+      <!-- sibling District Explorer links injected at boot from METRO_EXPLORERS -->
     </div>
   </div>
 </footer>
@@ -4493,6 +4511,31 @@
 
   var verifiedEl = document.getElementById("verified-date");
   verifiedEl.textContent = "July 10, 2026";
+
+  /* Sibling District Explorer deployments — one canonical list shared by every
+   * metro fork. When a new metro launches, add its entry here (and in each
+   * sibling fork). THIS_METRO is the only fork-specific value: it drops the
+   * fork's own entry so the list can be copied verbatim between forks. */
+  var THIS_METRO = "nyc";
+  var METRO_EXPLORERS = [
+    { id: "chicago", label: "Chicago", url: "https://chidistricts.com/" },
+    { id: "nyc", label: "New York City", url: "https://nyc.chidistricts.com/" }
+  ];
+  (function renderMetroLinks() {
+    var row = document.getElementById("footer-metros");
+    for (var i = 0; i < METRO_EXPLORERS.length; i++) {
+      var metro = METRO_EXPLORERS[i];
+      if (metro.id === THIS_METRO) continue;
+      var a = document.createElement("a");
+      a.href = metro.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = metro.label;
+      row.appendChild(a);
+    }
+    // keep the row hidden if every listed metro is this one (label-only row)
+    if (row.querySelector("a")) row.hidden = false;
+  })();
 
   // expose a couple of things for later module threads / debugging, without
   // polluting global scope beyond one namespace

@@ -40,6 +40,8 @@ Same working style as `BUILD_PLAYBOOK_1.md`: build in small, cheap, focused thre
 
 **Sibling files to swap:** `CNAME` (custom domain — preserved purely by shipping the file in the Pages artifact), `manifest.webmanifest` (name + theme colors), `icons/` (192/512 PNGs), `README.md` (entirely city-specific), and `sw.js`'s two hardcoded lists (§4). `.github/workflows/` carry over structurally — only constants and dataset names change (§9 shows the NYC mapping).
 
+**Shared, not swapped — the footer's cross-metro links:** `METRO_EXPLORERS` in the boot block is one canonical list of every deployed explorer, identical across forks; only `THIS_METRO` (the fork's own id, which the renderer skips) changes per fork. When a new metro launches, add its entry to `METRO_EXPLORERS` in **every** sibling fork, not just the new one.
+
 **Test/gate constants to re-derive (never copy):** `scripts/smoke_test.mjs` `POINT` / `OFFLINE` / `EXPECT_LAYERS` (lines 36–38), `EXPECT_DISTRICT` (87), the second re-highlight point (124/135); `scripts/validate_index.py` `MIN_REGISTER_LAYER`, `GEOMETRY_FILES`, `ROSTER_FILES`; every scraper/builder count guard.
 
 ## 2. The layer contract (unchanged, verbatim)
@@ -86,7 +88,7 @@ Also reusable as-is: the `ward` module's two-live-datasets join (boundary + rost
 5. **Pick the offline anchors** (§4) and the smoke-test ground-truth points — two positive points landing in different districts, plus the §4 negative point where the geography allows one.
 6. **Map the pipeline**: for each roster, which scraper/builder pair template applies, which fetch engine, and the count guards (§9 is the model). Don't defer *every* roster to the pipeline thread: land the cheapest real one (a no-scrape public file, congress-legislators-style) during the modules thread itself — real data flushes factory paths that empty placeholders never exercise (see §1's re-core surgery notes).
 7. **Re-derive every gate constant** (§1's last paragraph) and both `sw.js` lists.
-8. **Swap deploy**: CNAME, manifest, icons, README, footer attribution. The `deploy-pages.yml` rsync exclude list is generic — but confirm nothing city-new (e.g. a large source GeoJSON) slips into the artifact.
+8. **Swap deploy**: CNAME, manifest, icons, README, footer attribution; set `THIS_METRO` and add the new metro to `METRO_EXPLORERS` here **and in every sibling fork** (§1). The `deploy-pages.yml` rsync exclude list is generic — but confirm nothing city-new (e.g. a large source GeoJSON) slips into the artifact.
 9. **Cross-group parity audit** before calling assembly done: for each field one group's cards render (office address, inline pin, map pin, phone, oversight links), check every other group's cards that *could* carry it. NYC shipped its political cards name-only while the safety and school cards already carried addresses and pins — no gate catches this class of gap; only a deliberate side-by-side pass does. The audit has a **second axis: surfaces, not just groups.** The hover explorer renders every polygon layer too, and it fails *soft* by design (a missed property is a blank row, not an error card) — so also do a **hover sweep**: toggle every polygon layer on, hover each smoke-test ground-truth point, and confirm every row shows a real identity matching its card's headline, not the em-dash fallback. NYC shipped every hover row label-only (fixed in PR #9) because no automated gate exercises the popup.
 
 ## 4. The offline-anchor rule
