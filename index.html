@@ -3174,6 +3174,7 @@
   // the .geojson route — the coordinates live in latitude/longitude *properties*.
   // Build a real Point FeatureCollection from the .json rows so both the overlay
   // markers and the nearest-N query work. Reused by the school-site layer later.
+  /* ==== ENGINE:BEGIN socrata-point-loader ==== */
   function makeSocrataPointLoader(datasetId, whereClause, latField, lngField) {
     return makeCached(function () {
       var q = "?$limit=1000" + (whereClause ? "&$where=" + encodeURIComponent(whereClause) : "");
@@ -3190,6 +3191,7 @@
       });
     });
   }
+  /* ==== ENGINE:END socrata-point-loader ==== */
   // Declarative nearest-3 point layer (haversine, straight-line). `line(props)`
   // formats one list item; `pick` isn't needed — the raw feature props are passed.
   function registerNearestPointLayer(opts) {
@@ -3766,6 +3768,7 @@
    * The ballot-counting unit; `ElectDist` encodes AD*1000 + ED (23001 = AD 23,
    * ED 1). Too many features for one Socrata/ArcGIS response, so the loader
    * pages. subOf:"state-assembly" nests + frames it (same as police-sector). */
+  /* ==== ENGINE:BEGIN arcgis-paged-loader ==== */
   function loadArcGISPaged(layerUrl, outFields) {
     var PAGE = 1000;
     function page(offset, acc) {
@@ -3781,6 +3784,7 @@
     }
     return page(0, []);
   }
+  /* ==== ENGINE:END arcgis-paged-loader ==== */
   var ELECTION_DISTRICTS_SERVICE = "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Election_Districts/FeatureServer/0";
   var loadElectionDistricts = makeCached(function () { return loadArcGISPaged(ELECTION_DISTRICTS_SERVICE, "ElectDist"); });
   function splitElectDist(v) {
