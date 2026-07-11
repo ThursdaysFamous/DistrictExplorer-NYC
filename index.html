@@ -1521,6 +1521,54 @@
     });
   }
 
+  /* ---------- out-of-scope wash (coverage indicator) ----------
+   * The app only classifies points inside the five boroughs, but the map pans
+   * well past them (New Jersey, Westchester, Nassau, ...). So coverage is
+   * visible before a wasted click, everything outside the boroughs gets a
+   * subtle gray wash: one world-sized polygon with each borough's outer rings
+   * cut out as holes (Leaflet paths fill even-odd, so the holes read through).
+   * Water between boroughs sits outside every shoreline-clipped polygon layer,
+   * so it washes too — consistent with those clicks honestly resolving to
+   * little or nothing. The wash draws in its own pane between the tiles and
+   * the overlay pane so every district overlay, highlight and marker stays on
+   * top, and pointer-events stay off so clicks fall through to the map. It
+   * reuses the shared cached borough loader (applyBoroughMarker pattern); if
+   * that fetch fails the wash is skipped silently — it is a hint, not data,
+   * and the borough card's own error/Retry surfaces the failure. */
+  var scopeMaskPane = map.createPane("scope-mask");
+  scopeMaskPane.style.zIndex = "350"; // tile pane is 200, overlay pane 400
+  scopeMaskPane.style.pointerEvents = "none";
+
+  function drawOutOfScopeMask() {
+    if (typeof loadBoroughBoundaries !== "function") return;
+    loadBoroughBoundaries().then(function (geo) {
+      var feats = (geo && geo.features) || [];
+      if (!feats.length) return;
+      // Outer ring spans several world copies so panning far east/west at low
+      // zoom never slips out from under the wash.
+      var rings = [[[-89, -720], [89, -720], [89, 720], [-89, 720]]];
+      for (var i = 0; i < feats.length; i++) {
+        var geom = feats[i].geometry;
+        if (!geom) continue;
+        var polys = geom.type === "Polygon" ? [geom.coordinates]
+                  : geom.type === "MultiPolygon" ? geom.coordinates : [];
+        for (var p = 0; p < polys.length; p++) {
+          var outer = polys[p][0]; // outer rings only — a hole inside a borough is still in scope
+          var hole = [];
+          for (var v = 0; v < outer.length; v++) hole.push([outer[v][1], outer[v][0]]);
+          rings.push(hole);
+        }
+      }
+      L.polygon(rings, {
+        pane: "scope-mask",
+        stroke: false,
+        fillColor: "#3E4C59",
+        fillOpacity: 0.18,
+        interactive: false
+      }).addTo(map);
+    }).catch(function () { /* decorative — skip the wash, never surface an error */ });
+  }
+
   var selectedMarker = null;
   var pointChip = document.getElementById("point-chip");
 
@@ -4566,6 +4614,9 @@
 
   buildGroupsUI();
   applyStateFromHash(); // restore a shared #point=…&layers=… link, if present
+  // After applyStateFromHash so a restored point's applyBoroughMarker call and
+  // the wash share one cached borough-boundaries fetch.
+  drawOutOfScopeMask();
 
   var verifiedEl = document.getElementById("verified-date");
   verifiedEl.textContent = "July 10, 2026";
