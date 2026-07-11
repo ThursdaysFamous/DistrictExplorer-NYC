@@ -1209,6 +1209,10 @@
     { id: "nyc", label: "New York City", url: "https://nyc.chidistricts.com/", emoji: "🗽",
       bbox: { minLng: -74.3, minLat: 40.45, maxLng: -73.6, maxLat: 41.0 } }
   ];
+  /* CSS class names for the fork-branded map chrome: ENGINE code applies them,
+   * this fork's stylesheet defines them (they carry the fork's palette). */
+  var HIGHLIGHT_CLASS = "nyc-region-highlight"; // selected-region highlight (drop-shadow filter)
+  var POI_PIN_CLASS = "nyc-poi-pin";            // geocoded point-of-interest marker
   /* ==== METRO:END config ==== */
 
   /* ==== ENGINE:BEGIN app-token ==== */
@@ -2371,12 +2375,14 @@
    * Each module: { id, group, label, overlay:{load,style}, query(point,seq), render(result) }
    * ======================================================================= */
 
+  /* ==== ENGINE:BEGIN groups ==== */
   var GROUPS = [
     { id: "political", label: "Political" },
     { id: "safety", label: "Public Safety" },
     { id: "schools", label: "Schools" },
     { id: "geography", label: "Geography" }
   ];
+  /* ==== ENGINE:END groups ==== */
 
   // Approximate real-world area ranking, largest to smallest, used to keep
   // smaller/more granular boundaries visible on top of larger ones (see
@@ -2418,6 +2424,7 @@
     "fire-station"        // point marker — always topmost
   ];
 
+  /* ==== ENGINE:BEGIN layer-registry ==== */
   var layers = [];       // registered modules
   var layerRuntime = {}; // id -> { overlayLayer, overlayLoaded, cardBody }
 
@@ -2481,17 +2488,43 @@
     return (style.fillOpacity || 0) * scaleFactorForActiveCount(n);
   }
 
-  function baseStyleFor(mod) {
+  function baseStyleFor(mod, feature) {
     var style = mod.overlay && mod.overlay.style;
     if (!style) return null;
     var rt = layerRuntime[mod.id];
-    return {
+    var base = {
       color: style.color,
       weight: style.weight,
       fillColor: style.fillColor,
       fillOpacity: (rt && rt.outlineOnly) ? 0 : scaledFillOpacity(mod),
       dashArray: style.dashArray
     };
+    // Optional per-feature override (e.g. the School Location layer color-codes
+    // each footprint by school type and hides types the card's filter turned
+    // off). Layered on top of the flat base so fill-opacity scaling still applies
+    // to the features that stay visible.
+    if (feature && mod.overlay.styleForFeature) {
+      var ov = mod.overlay.styleForFeature(feature);
+      if (ov) {
+        if (ov.color != null) base.color = ov.color;
+        if (ov.fillColor != null) base.fillColor = ov.fillColor;
+        if (ov.opacity != null) base.opacity = ov.opacity;
+        if (ov.fillOpacity != null) base.fillOpacity = ov.fillOpacity;
+        if (ov.dashArray != null) base.dashArray = ov.dashArray;
+      }
+    }
+    return base;
+  }
+
+  // Repaint every path in a layer's overlay from its per-feature base style —
+  // used when a layer's styling inputs change without the selected point moving
+  // (the School Location type filter toggling which categories are shown/colored).
+  function restyleOverlayFeatures(mod) {
+    var rt = layerRuntime[mod.id];
+    if (!rt || !rt.overlayLayer) return;
+    rt.overlayLayer.eachLayer(function (subLayer) {
+      if (subLayer.setStyle && subLayer.feature) subLayer.setStyle(baseStyleFor(mod, subLayer.feature));
+    });
   }
 
   // The active-layer-count signature the P7 incremental highlight fast path keys
@@ -2520,7 +2553,12 @@
     var fillOpacity = scaledFillOpacity(mod);
     if (fillOpacity == null) return; // point-dataset layer (no flat style object)
     rt.overlayLayer.eachLayer(function (subLayer) {
-      if (subLayer.setStyle) subLayer.setStyle({ fillOpacity: fillOpacity });
+      if (!subLayer.setStyle) return;
+      // A per-feature styler owns each path's fill (a filtered-out School
+      // Location footprint must stay hidden), so re-derive its full base style
+      // rather than force the flat scaled opacity back on.
+      if (mod.overlay.styleForFeature) subLayer.setStyle(baseStyleFor(mod, subLayer.feature));
+      else subLayer.setStyle({ fillOpacity: fillOpacity });
     });
   }
 
@@ -2555,10 +2593,11 @@
    * fire stations) never match since pointInGeometry only handles
    * Polygon/MultiPolygon, so they're unaffected.
    *
-   * The drop-shadow "floating" look is a CSS filter (.nyc-region-highlight),
-   * applied by mutating the SVG path's class list directly — Leaflet's
-   * `className` style option only takes effect when the path is first
-   * created, not on later setStyle() calls, so setStyle() alone can't do this. */
+   * The drop-shadow "floating" look is a CSS filter (the HIGHLIGHT_CLASS rule
+   * in each fork's stylesheet), applied by mutating the SVG path's class list
+   * directly — Leaflet's `className` style option only takes effect when the
+   * path is first created, not on later setStyle() calls, so setStyle() alone
+   * can't do this. */
   // darken a #rrggbb / #rgb hex color toward black by `amount` (0 = unchanged, 1 = black).
   // No color library in this codebase — this is the minimal hand-rolled version needed here.
   function darkenHexColor(hex, amount) {
@@ -2589,7 +2628,6 @@
       dashArray: null
     };
   }
-  var HIGHLIGHT_CLASS = "nyc-region-highlight";
 
   function fadedStyle(baseStyle) {
     return {
@@ -2609,13 +2647,18 @@
     rt.highlightSignature = null;
     if (!rt.overlayLayer) return;
     rt.overlayLayer.eachLayer(function (subLayer) {
-      if (subLayer.setStyle) subLayer.setStyle(baseStyleFor(mod));
+      if (subLayer.setStyle) subLayer.setStyle(baseStyleFor(mod, subLayer.feature));
       if (subLayer._path) subLayer._path.classList.remove(HIGHLIGHT_CLASS);
     });
   }
 
   function updateLayerHighlight(mod) {
     var rt = layerRuntime[mod.id];
+    // A color-coded layer (School Location) owns its per-feature appearance and
+    // is a nearest-N layer, not a containment one — fading every footprint but
+    // the one a click happens to land inside would defeat the type coloring, so
+    // skip the highlight/fade sweep and just keep the per-feature base styling.
+    if (mod.overlay && mod.overlay.styleForFeature) { clearLayerHighlight(mod); return; }
     if (!rt.overlayLayer || !rt.geojson || !state.selectedPoint) { clearLayerHighlight(mod); return; }
     var feature = findFeatureContaining(rt.geojson, state.selectedPoint);
     if (!feature) { clearLayerHighlight(mod); return; }
@@ -2672,6 +2715,7 @@
     if (style && (style.color || style.fillColor)) return style.color || style.fillColor;
     return mod.color || "#14181C";
   }
+  /* ==== ENGINE:END layer-registry ==== */
 
   var poiGeocodeCache = {}; // address string -> {lat,lng} | null, avoids re-geocoding the same address
 
@@ -2745,11 +2789,12 @@
     });
   }
 
+  /* ==== ENGINE:BEGIN overlay-cards ==== */
   var poiPinIconCache = {};
   function poiPinIcon(color) {
     if (poiPinIconCache[color]) return poiPinIconCache[color];
     var icon = L.divIcon({
-      className: "nyc-poi-pin",
+      className: POI_PIN_CLASS,
       html: '<svg viewBox="0 0 24 32" width="22" height="30" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45))">' +
         '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="' + color + '" stroke="#ffffff" stroke-width="1.5"/>' +
         '<circle cx="12" cy="12" r="4.2" fill="#ffffff"/>' +
@@ -2977,8 +3022,14 @@
   // the first (post-fetch) build and the P11 rebuild-on-re-toggle path produce an
   // identical layer graph — same base style and optional point renderer.
   function buildOverlayLayer(mod, geojson) {
+    // A layer with a per-feature styler paints each path from its own feature
+    // (School Location color-codes footprints by school type); everything else
+    // shares the one flat base style.
+    var styleFn = mod.overlay.styleForFeature
+      ? function (feature) { return baseStyleFor(mod, feature); }
+      : (baseStyleFor(mod) || undefined);
     return L.geoJSON(geojson, {
-      style: baseStyleFor(mod) || undefined,
+      style: styleFn,
       pointToLayer: mod.overlay.pointToLayer // optional; used by point datasets (e.g. fire stations)
     });
   }
@@ -3142,6 +3193,7 @@
       if (state.layersOn[mod.id]) runLayerQuery(mod);
     });
   }
+  /* ==== ENGINE:END overlay-cards ==== */
 
   /* ==== ENGINE:BEGIN render-helper ==== */
   /* ---------- small render helper shared by modules ---------- */
@@ -3318,6 +3370,7 @@
   }
 
   /* ==== ENGINE:END find-prop-ci ==== */
+  /* ==== ENGINE:BEGIN polygon-factory ==== */
   /* ---------- declarative factory for single-source polygon layers ----------
    * The plain "load a boundary set, find the polygon containing the point, read
    * a few properties, list them" shape recurs across layers with no async roster
@@ -3346,7 +3399,8 @@
       group: opts.group,
       label: opts.label,
       // hover popup reads the same primary field the card's headline row shows,
-      // so the two surfaces can never disagree on a district's identity.
+      // so the two surfaces can never disagree on a district's identity
+      // (METRO_EXPANSION_PLAYBOOK §2 hover-parity rule, back-ported from NYC).
       hoverName: primaryField ? function (feature) {
         var v = findPropCI(feature.properties || {}, primaryField.keys);
         return (v == null || v === "") ? null : String(v);
@@ -3381,6 +3435,7 @@
       pointOfInterest: opts.pointOfInterest
     });
   }
+  /* ==== ENGINE:END polygon-factory ==== */
 
   /* =========================================================================
    * THREAD 1 — GEOGRAPHY + OFFLINE ANCHORS (METRO_EXPANSION_PLAYBOOK §7/§8)
@@ -3520,6 +3575,7 @@
   function toTitleCase(s) {
     return String(s).toLowerCase().replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); });
   }
+  /* ==== ENGINE:BEGIN int-field ==== */
   // Normalize a numeric-ish field to its integer string ("15.0" -> "15"); passes
   // non-numeric values through and null/"" to null. (Socrata sometimes serves
   // integer district numbers as floats.)
@@ -3528,6 +3584,7 @@
     var n = parseInt(v, 10);
     return isNaN(n) ? v : String(n);
   }
+  /* ==== ENGINE:END int-field ==== */
   // Ordinal for the NYPD per-precinct page slug (1 -> "1st", 13 -> "13th").
   function ordinalSuffix(n) {
     n = parseInt(n, 10);
@@ -3558,12 +3615,14 @@
   /* ==== ENGINE:END socrata-point-loader ==== */
   // Declarative nearest-3 point layer (haversine, straight-line). `line(props)`
   // formats one list item; `pick` isn't needed — the raw feature props are passed.
+  /* ==== ENGINE:BEGIN nearest-point-factory ==== */
   function registerNearestPointLayer(opts) {
+    var count = opts.count || 3;
     registerLayer({
       id: opts.id,
       group: opts.group,
-      label: opts.label + " (nearest 3)",
-      color: opts.color,
+      label: opts.label + " (nearest " + count + ")",
+      color: opts.color, // overlay has no flat style object for moduleColor() to read
       overlay: {
         load: opts.loader,
         pointToLayer: function (feature, latlng) {
@@ -3571,16 +3630,20 @@
         }
       },
       query: function (point, seq) {
-        return opts.loader().then(function (gj) {
-          var feats = (gj && gj.features) || [], wd = [];
-          for (var i = 0; i < feats.length; i++) {
-            var ll = pointFeatureLatLng(feats[i]);
-            if (!ll) continue;
-            wd.push({ props: feats[i].properties || {}, d: haversineMiles(point.lat, point.lng, ll.lat, ll.lng) });
+        return opts.loader().then(function (geojson) {
+          var features = (geojson && geojson.features) || [];
+          var withDistance = [];
+          for (var i = 0; i < features.length; i++) {
+            var latLng = pointFeatureLatLng(features[i]);
+            if (!latLng) continue;
+            withDistance.push({
+              props: features[i].properties || {},
+              distanceMi: haversineMiles(point.lat, point.lng, latLng.lat, latLng.lng)
+            });
           }
-          if (!wd.length) return null;
-          wd.sort(function (a, b) { return a.d - b.d; });
-          return { seq: seq, items: wd.slice(0, 3) };
+          if (!withDistance.length) return null;
+          withDistance.sort(function (a, b) { return a.distanceMi - b.distanceMi; });
+          return { seq: seq, items: withDistance.slice(0, count) };
         });
       },
       render: function (result) {
@@ -3594,7 +3657,7 @@
         ol.style.paddingLeft = "20px";
         result.items.forEach(function (s) {
           var li = document.createElement("li");
-          li.textContent = opts.line(s.props) + " — " + s.d.toFixed(2) + " mi";
+          li.textContent = opts.line(s.props) + " — " + s.distanceMi.toFixed(2) + " mi";
           ol.appendChild(li);
         });
         wrap.appendChild(ol);
@@ -3602,6 +3665,7 @@
       }
     });
   }
+  /* ==== ENGINE:END nearest-point-factory ==== */
 
   /* ---------- NYPD Precinct (78) ----------
    * Boundary from Socrata y76i-bdw7 (`precinct`). Joins the same-origin
@@ -3812,21 +3876,33 @@
    * (registerSchoolZone / registerNearestPointLayer factories are hoisted.)
    * ======================================================================= */
 
+  /* All three NYC zone levels share one GeoJSON schema — one fork-side wrapper
+   * wires the keys, the DBN "is there a zoned school" rule, and the profile
+   * builder so the shared registerSchoolZone factory stays city-agnostic. */
+  function registerNycZone(opts) {
+    opts.nameKeys = ["label", "sch_name", "short_name", "school_name", "schoolname", "name"];
+    opts.idKeys = ["dbn", "school_id", "schoolid"];
+    opts.districtKeys = ["schooldist", "zoned_dist"];
+    opts.requireId = true;
+    opts.profileHtml = schoolProfileHtml;
+    registerSchoolZone(opts);
+  }
+
   var MYSCHOOLS_LINK = '<a href="https://www.myschools.nyc/" target="_blank" rel="noopener">MySchools</a>';
 
-  registerSchoolZone({
+  registerNycZone({
     id: "es-zone", label: "Elementary School Zone", datasetId: "cmjf-yawu",
     style: { color: "#2E7D5B", weight: 1.5, fillColor: "#7CC49B", fillOpacity: 0.12 },
     emptyNote: "No zoned elementary school found for this point.",
     moreHtml: MYSCHOOLS_LINK
   });
-  registerSchoolZone({
+  registerNycZone({
     id: "ms-zone", label: "Middle School Zone", datasetId: "t26j-jbq7",
     style: { color: "#1F6F5C", weight: 1.5, fillColor: "#5FB49C", fillOpacity: 0.12, dashArray: "5 3" },
     emptyNote: "No zoned middle school here — much of NYC middle-school admission is choice-based.",
     moreHtml: MYSCHOOLS_LINK
   });
-  registerSchoolZone({
+  registerNycZone({
     id: "hs-zone", label: "High School Zone", datasetId: "ruu9-egea",
     style: { color: "#155C4B", weight: 1.5, fillColor: "#4CA98F", fillOpacity: 0.12, dashArray: "2 4" },
     emptyNote: "Most NYC high schools admit by application citywide, not by zone.",
@@ -4321,24 +4397,31 @@
     return '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">MySchools profile</a>';
   }
 
-  // Attendance-zone factory. NYC's zone datasets carry `dbn` + `label` (school)
-  // and `schooldist`; MS/HS catchments legitimately have NO zoned school
-  // (choice-based admission), so a click that lands in an unzoned catchment — or
-  // a feature with a null school — renders opts.emptyNote honestly instead of a
-  // blank "No result". opts: { id, label, datasetId, style, emptyNote?, moreHtml? }.
+  /* ==== ENGINE:BEGIN school-zone-factory ==== */
   function registerSchoolZone(opts) {
+    // One point-in-polygon attendance-zone layer per school level. City-specific
+    // dataset schemas and policies stay in opts: { id, label, datasetId, style,
+    // nameKeys, idKeys, districtKeys?, gradeKeys?, addressKeys?, requireId?,
+    // emptyNote?, moreHtml?, profileHtml? }. requireId treats a feature without
+    // an id as "no zoned school" (choice-based catchments carry placeholder
+    // polygons); emptyNote renders that honest empty state (with moreHtml as an
+    // application link) instead of a bare no-result. profileHtml(id) is the
+    // fork's sanitized school-profile link builder — profile URLs are only ever
+    // built from a dataset-supplied id, never guessed from a name.
     var loadZones = makeCachedLoader(opts.datasetId);
+    function zoneField(props, keys) {
+      return props && keys ? findPropCI(props, keys) : null;
+    }
     registerLayer({
       id: opts.id,
       group: "schools",
       label: opts.label,
       // hover popup: same identity the card headline shows — the zoned school's
-      // name when the feature carries a DBN, or the honest "None" for the
-      // choice-based catchments the query below treats as unzoned.
+      // name, or the honest "None" where requireId treats the feature as unzoned.
       hoverName: function (feature) {
         var props = feature.properties || {};
-        if (!findPropCI(props, ["dbn", "school_id", "schoolid"])) return "None";
-        var name = findPropCI(props, ["label", "sch_name", "short_name", "school_name", "schoolname", "name"]);
+        if (opts.requireId && !zoneField(props, opts.idKeys)) return "None";
+        var name = zoneField(props, opts.nameKeys);
         return name ? String(name) : null;
       },
       overlay: { load: loadZones, style: opts.style },
@@ -4346,17 +4429,20 @@
         return loadZones().then(function (geojson) {
           var feature = findFeatureContaining(geojson, point);
           var props = feature ? (feature.properties || {}) : null;
-          var name = props && findPropCI(props, ["label", "sch_name", "short_name", "school_name", "schoolname", "name"]);
-          var schoolId = props && findPropCI(props, ["dbn", "school_id", "schoolid"]);
-          var district = intField(props && findPropCI(props, ["schooldist", "zoned_dist"]));
-          // The DBN is the reliable "is there a zoned school" signal: MS/HS
-          // choice catchments carry a district placeholder label (e.g. "D15")
-          // with a null DBN — treat those (and points outside every zone) as no
-          // zoned school so the honest choice-based note renders.
-          if (!schoolId) {
+          var schoolId = zoneField(props, opts.idKeys);
+          var district = intField(zoneField(props, opts.districtKeys));
+          if (opts.requireId && !schoolId) {
             return opts.emptyNote ? { seq: seq, none: true, district: district } : null;
           }
-          return { seq: seq, name: name, schoolId: schoolId, district: district };
+          if (!feature) return null;
+          return {
+            seq: seq,
+            name: zoneField(props, opts.nameKeys),
+            schoolId: schoolId,
+            district: district,
+            grades: zoneField(props, opts.gradeKeys),
+            address: zoneField(props, opts.addressKeys)
+          };
         });
       },
       render: function (result) {
@@ -4369,16 +4455,24 @@
         }
         var fields = [{ label: "Zoned school", value: result.name ? String(result.name) : "Unknown" }];
         if (result.district) fields.push({ label: "School district", value: String(result.district) });
-        var profileHtml = schoolProfileHtml(result.schoolId);
+        if (result.grades) fields.push({ label: "Grades", value: String(result.grades) });
+        if (result.address) fields.push({ label: "Address", value: String(result.address), pin: opts.style.color });
+        var profileHtml = opts.profileHtml ? opts.profileHtml(result.schoolId) : null;
         if (profileHtml) fields.push({ label: "Profile", html: profileHtml });
         return renderFieldList(fields);
+      },
+      pointOfInterest: function (result) {
+        if (!result.address) return null;
+        return { label: result.name ? String(result.name) : "School", address: String(result.address) };
       }
     });
   }
+  /* ==== ENGINE:END school-zone-factory ==== */
 
 
 
 
+  /* ==== ENGINE:BEGIN cps-network-factory ==== */
   /* ---------- CPS Network (administrative region, not a single school) ----------
    * Confirmed via live sample: each polygon covers a whole CPS "Network"
    * (K-8's pnta-kuqa, High School's aupu-jt2g — same schema, separate
@@ -4424,6 +4518,7 @@
       }
     });
   }
+  /* ==== ENGINE:END cps-network-factory ==== */
 
 
   /* =========================================================================
@@ -4503,6 +4598,7 @@
   }
 
 
+  /* ==== ENGINE:BEGIN office-helpers ==== */
   /* ---------- IL State Senate / IL State House — Open States has no browser
    * CORS (per playbook), so instead of a live roster join these look up the
    * district in a build-side roster served from the same-origin
@@ -4522,6 +4618,7 @@
     if (!lines || !lines.length) return null;
     return lines.map(sanitize).join("<br>");
   }
+
   // Extract a geocodable street address from an office's address lines (an array
   // of strings): drop phone/fax lines, keep the street + city/zip. Used by
   // registerIlgaChamber's pointOfInterest when a roster supplies office lines.
@@ -4533,7 +4630,9 @@
     var addr = (kept.length ? kept : lines).join(", ").trim();
     return addr || null;
   }
+  /* ==== ENGINE:END office-helpers ==== */
 
+  /* ==== ENGINE:BEGIN chamber-factory ==== */
   function registerIlgaChamber(opts) {
     // A TIGERweb legislative chamber (Congress / State Senate / State Assembly)
     // joined to a same-origin roster keyed by district number. opts: { id, label,
@@ -4607,6 +4706,7 @@
       }
     });
   }
+  /* ==== ENGINE:END chamber-factory ==== */
   /* =========================================================================
    * HOVER EXPLORER — a live popup (on by default, toggled bottom-left) that
    * follows the cursor and names the districts it's over. mousemove is throttled
