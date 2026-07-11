@@ -1,0 +1,62 @@
+name: Engine parity across metro forks
+
+# On-demand check that the fenced ENGINE blocks in index.html are still
+# byte-identical to the reference implementation's DEPLOYED site.
+#
+# The *scheduled* watcher runs in the Chicago repo (DistrictExplorer-CHI) —
+# Chicago is the reference implementation (docs/ENGINE_SYNC.md), so the one
+# tracking issue lives there instead of N mirrored ones. This fork carries
+# the same workflow with workflow_dispatch only, for on-demand checks (e.g.
+# right after porting an engine diff, before/after a deploy).
+#
+# scripts/check_engine_parity.py never edits anything. Drift is a WARN and
+# this workflow opens — or updates in place — a single tracking issue so a
+# human ports the missing diff (port the diff, not the prompt). The job stays
+# green: the issue is the signal.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  engine-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare ENGINE blocks against the reference deployment
+        id: parity
+        # Stdlib only — no pip install.
+        continue-on-error: true
+        run: |
+          python3 scripts/check_engine_parity.py index.html \
+            --against https://chidistricts.com/ \
+            --label chicago \
+            --report parity-report.md \
+            --status-file status.txt
+          echo "status=$(cat status.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update tracking issue
+        if: steps.parity.outputs.status != 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Engine drift vs the reference fork — port needed"
+          {
+            echo "_Automated by \`.github/workflows/engine-parity.yml\` on $(date -u +%Y-%m-%d). Nothing was changed. A fenced ENGINE block differs between this repo and the reference fork's deployed site — port the missing commit(s) per \`docs/ENGINE_SYNC.md\` (port the diff, not the prompt). A block that only just merged here will show as drift until the sibling ships it. Close this issue once addressed; it will reopen/refresh on the next run if drift remains._"
+            echo
+            cat parity-report.md
+          } > issue-body.md
+
+          existing="$(gh issue list --state open --search "in:title $title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file issue-body.md
+            gh issue comment "$existing" --body "Refreshed by an on-demand engine-parity run — see the updated issue body for the current status."
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --title "$title" --body-file issue-body.md
+            echo "Opened a new tracking issue."
+          fi
