@@ -24,7 +24,7 @@
 <link rel="dns-prefetch" href="https://geosearch.planninglabs.nyc">
 <link rel="dns-prefetch" href="https://services5.arcgis.com">
 <link rel="dns-prefetch" href="https://tigerweb.geo.census.gov">
-<link rel="dns-prefetch" href="https://nominatim.openstreetmap.org">
+<link rel="dns-prefetch" href="https://photon.komoot.io">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="" />
@@ -285,6 +285,21 @@
 
   /* ---------- sibling-metro portal (easter egg — see ENGINE metro-portal) ---------- */
   /* ==== ENGINE:END styles-core ==== */
+  /* ==== ENGINE:BEGIN styles-sibling-result ==== */
+  #geocode-results li.sibling-result { border-top: 2px solid var(--accent); }
+  #geocode-results li.sibling-result button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .sibling-result-hint {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent-deep);
+  }
+  /* ==== ENGINE:END styles-sibling-result ==== */
+
   /* ==== ENGINE:BEGIN styles-app ==== */
   #metro-portal {
     position: fixed;
@@ -1124,7 +1139,7 @@
     <div class="footer-sources" id="footer-sources">
       <span class="footer-sources-label">Sources</span>
       <a href="https://geosearch.planninglabs.nyc" target="_blank" rel="noopener">Geocoding © NYC Planning (GeoSearch)</a>
-      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">Nominatim fallback © OpenStreetMap contributors</a>
+      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">Cross-metro lookup © OpenStreetMap contributors (Photon/Komoot)</a>
       <a href="https://opendata.cityofnewyork.us" target="_blank" rel="noopener">NYC Open Data</a>
       <a href="https://tigerweb.geo.census.gov" target="_blank" rel="noopener">U.S. Census TIGERweb</a>
       <a href="https://www.arcgis.com/home/item.html?id=GfwWNkhOj9bNBqoJ" target="_blank" rel="noopener">Fire battalions &amp; election districts © NYC (ArcGIS)</a>
@@ -2239,10 +2254,14 @@
   });
   /* ==== ENGINE:END metro-portal ==== */
   /* =========================================================================
-   * GEOCODER — NYC Planning GeoSearch (Pelias), debounced, NYC-scoped, attributed.
-   * Swappable: everything lives behind geocodeAddress().
+   * GEOCODER — NYC Planning GeoSearch (Pelias) search box + POI lookups,
+   * NYC-scoped, attributed; Photon (OSM) for the cross-metro sibling lookup.
+   * Fork-provider seam: geocodeAddress() / geocodeUnbounded() /
+   * poiGeocodeRequest() below feed the fenced geocoder-shell /
+   * geocoder-search / poi-geocode engine blocks.
    * ======================================================================= */
 
+  /* ==== ENGINE:BEGIN geocoder-shell ==== */
   var geoStatus = document.getElementById("geo-status");
   var geoResultsList = document.getElementById("geocode-results");
   var debounceTimer = null;
@@ -2275,6 +2294,7 @@
   geocodeInputEl.addEventListener("focus", reengageSearchShell);
   new MutationObserver(refreshSearchShellExpanded).observe(geoStatus, { childList: true, characterData: true, subtree: true });
   new MutationObserver(refreshSearchShellExpanded).observe(geoResultsList, { childList: true, subtree: true });
+  /* ==== ENGINE:END geocoder-shell ==== */
 
   /* Builds a comma-separated label from a GeoSearch (Pelias) feature's
    * properties. Pelias already supplies a ready-made `label`; fall back to
@@ -2320,10 +2340,59 @@
       .then(normalizeGeoSearch);
   }
 
+  /* Whole-OSM lookup for the fenced sibling-metro search fallback: GeoSearch
+   * only covers NYC, so a sibling-metro address needs an OSM-backed provider —
+   * Photon (Komoot), the same one the reference fork's search box uses. Fires
+   * only after a zero-result NYC search (see maybeRenderSiblingMatches). */
+  function photonLabel(p) {
+    var streetLine = "";
+    if (p.housenumber && p.street) streetLine = p.housenumber + " " + p.street;
+    else if (p.street) streetLine = p.street;
+    var parts = [];
+    if (p.name && p.name !== p.street) parts.push(p.name);
+    if (streetLine) parts.push(streetLine);
+    if (p.district && p.district !== p.city) parts.push(p.district);
+    if (p.city) parts.push(p.city);
+    if (p.state) parts.push(p.state);
+    if (p.postcode) parts.push(p.postcode);
+    return parts.join(", ");
+  }
+  function normalizePhoton(fc) {
+    var feats = (fc && fc.features) || [];
+    return feats.map(function (f) {
+      var c = (f.geometry && f.geometry.coordinates) || [];
+      return { lat: c[1], lon: c[0], display_name: photonLabel(f.properties || {}) };
+    }).filter(function (r) {
+      return r.lat != null && r.lon != null && r.display_name;
+    });
+  }
+  function geocodeUnbounded(query, signal) {
+    var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&lang=en&limit=8";
+    return fetch(url, { signal: signal, headers: { "Accept": "application/json" } })
+      .then(function (res) { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+      .then(normalizePhoton);
+  }
+
+  /* POI provider for the fenced poi-geocode queue: NYC Planning GeoSearch
+   * /v2/search — keyless, PAD-backed, NYC-scoped by construction (no viewbox
+   * needed). Resolves {lat,lng} | null on a successful lookup; rejects on
+   * transport failure so the engine won't cache the miss. (§6a.) */
+  function poiGeocodeRequest(address) {
+    var url = "https://geosearch.planninglabs.nyc/v2/search?text=" +
+      encodeURIComponent(address) + "&size=1";
+    return fetchJSONWithRetry(url, { headers: { "Accept": "application/json" } }, 1)
+      .then(function (fc) {
+        var hit = fc && fc.features && fc.features[0];
+        var c = (hit && hit.geometry && hit.geometry.coordinates) || null;
+        return c ? { lat: c[1], lng: c[0] } : null;
+      });
+  }
+
+  /* ==== ENGINE:BEGIN geocoder-search ==== */
   function renderGeocodeResults(results) {
     geoResultsList.innerHTML = "";
     if (!results || results.length === 0) {
-      geoStatus.textContent = "No addresses matched inside New York City yet. Keep typing, or check the spelling.";
+      geoStatus.textContent = "No addresses matched inside " + METRO_NAME + " yet. Keep typing, or check the spelling.";
       geoStatus.className = "geo-status err";
       return;
     }
@@ -2354,6 +2423,83 @@
     });
   }
 
+  /* ---------- sibling-metro search fallback (easter egg) ----------
+   * When a query matches nothing inside the home metro, quietly retry it
+   * against each sibling District Explorer's metro bbox (METRO_EXPLORERS —
+   * see the ENGINE metro-portal block). A hit renders as a special result
+   * row that hands off to that fork with the address pre-selected via its
+   * #point= permalink. Only runs after a zero-result home search, so the
+   * extra request never fires for normal in-city typing. */
+  function buildSiblingResultRow(metro, r) {
+    var li = document.createElement("li");
+    li.className = "sibling-result";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    var addr = document.createElement("span");
+    addr.className = "sibling-result-addr";
+    // textContent — never innerHTML — for untrusted geocoder output
+    addr.textContent = (metro.emoji ? metro.emoji + " " : "") + r.display_name;
+    var hint = document.createElement("span");
+    hint.className = "sibling-result-hint";
+    hint.textContent = "Open in the " + metro.label + " District Explorer →";
+    btn.appendChild(addr);
+    btn.appendChild(hint);
+    btn.addEventListener("click", function () {
+      clearTimeout(debounceTimer);
+      if (inFlightController) inFlightController.abort();
+      trackEvent("metro-portal-go/" + metro.id, "search");
+      window.location.href = metroPortalUrl(metro, { lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+    });
+    li.appendChild(btn);
+    return li;
+  }
+
+  var SIBLING_ROWS_PER_METRO = 2; // keeps a many-metro future from flooding the result list
+  function maybeRenderSiblingMatches(query) {
+    var anySibling = METRO_EXPLORERS.some(function (m) { return m.id !== THIS_METRO && m.bbox; });
+    if (!anySibling) return;
+    // share the geocoder's abort slot so a new keystroke/search cancels this
+    // lookup exactly like it cancels an in-city one
+    inFlightController = new AbortController();
+    var signal = inFlightController.signal;
+    // one UNBOUNDED whole-coverage query, classified into metros locally
+    // (siblingMetroAt) — exactly one extra request per home-metro miss no
+    // matter how many sibling metros exist; hits outside every sibling metro
+    // are dropped. geocodeUnbounded is the fork's provider (the home search
+    // box may be scoped to the city, so this lookup needs its own wider call).
+    return geocodeUnbounded(query, signal)
+      .then(function (results) {
+        if (signal.aborted) return;
+        var perMetro = {}; // id -> rows rendered
+        var labels = [];
+        results.forEach(function (r) {
+          var metro = siblingMetroAt(parseFloat(r.lat), parseFloat(r.lon));
+          if (!metro) return; // not inside any sibling metro
+          perMetro[metro.id] = (perMetro[metro.id] || 0) + 1;
+          if (perMetro[metro.id] > SIBLING_ROWS_PER_METRO) return;
+          if (labels.indexOf(metro.label) === -1) labels.push(metro.label);
+          geoResultsList.appendChild(buildSiblingResultRow(metro, r));
+        });
+        if (!labels.length) return; // leave the standard "no matches" status as-is
+        geoStatus.textContent = "Nothing in " + METRO_NAME + " matched — but it looks like you're searching " +
+          labels.join(" and ") + ".";
+        geoStatus.className = "geo-status";
+      })
+      .catch(function (err) {
+        if (err.name === "AbortError") throw err; // the callers' handlers ignore aborts
+        // otherwise swallow: the home search itself succeeded, so the honest
+        // state is the standard "no matches" message already on screen — a
+        // failed easter-egg lookup must never surface as a search error
+      });
+  }
+
+  function runGeocodeSearch(q) {
+    return geocodeAddress(q).then(function (results) {
+      renderGeocodeResults(results);
+      if (!results || results.length === 0) return maybeRenderSiblingMatches(q);
+    });
+  }
+
   document.getElementById("geocode-form").addEventListener("submit", function (e) {
     e.preventDefault();
     var q = document.getElementById("geocode-input").value.trim();
@@ -2364,8 +2510,7 @@
     clearTimeout(debounceTimer);
     geoStatus.textContent = "Searching…";
     geoStatus.className = "geo-status";
-    geocodeAddress(q)
-      .then(renderGeocodeResults)
+    runGeocodeSearch(q)
       .catch(function (err) {
         if (err.name === "AbortError") return;
         geoStatus.textContent = "Search failed — the geocoder may be busy. Try again in a moment.";
@@ -2386,13 +2531,14 @@
     }
     debounceTimer = setTimeout(function () {
       geoStatus.textContent = "Searching…";
-      geocodeAddress(q).then(renderGeocodeResults).catch(function (err) {
+      runGeocodeSearch(q).catch(function (err) {
         if (err.name === "AbortError") return;
         geoStatus.textContent = "Search failed — the geocoder may be busy. Try again in a moment.";
         geoStatus.className = "geo-status err";
       });
-    }, 400); // debounced to stay a courteous GeoSearch client while feeling type-ahead-responsive
+    }, 400); // debounced to stay a courteous client of the fork's geocoder while feeling type-ahead-responsive
   });
+  /* ==== ENGINE:END geocoder-search ==== */
 
   /* =========================================================================
    * LAYER REGISTRY + RESULT-CARD FRAMEWORK
@@ -2741,16 +2887,19 @@
   }
   /* ==== ENGINE:END layer-registry ==== */
 
+  /* ==== ENGINE:BEGIN poi-geocode ==== */
   var poiGeocodeCache = {}; // address string -> {lat,lng} | null, avoids re-geocoding the same address
 
   /* ---------- POI geocodes go through a serial, >=1s-spaced queue ----------
+   * Public geocoders throttle or outright cap clients at ~1 request/second.
    * A single click runs every active layer's query in parallel, and each POI
-   * layer then geocodes its office address — up to ~9 requests firing at once.
-   * GeoSearch is permissive, but funnelling the uncached ones through one queue
-   * that spaces calls >=1s apart keeps us a courteous client; cached addresses
-   * (and the separate search-box geocoder) never touch this. A per-call
-   * currency check skips the network entirely once the selection has moved on,
-   * so rapid clicking can't build an unbounded backlog. */
+   * layer then geocodes its office address — up to ~9 requests firing at
+   * once, which a rate-limited endpoint would reject (429) so most pins would
+   * silently fail. Funnel the uncached ones through one queue that spaces
+   * network calls >=1s apart; cached addresses (and the separate search-box
+   * geocoder) never touch this. A per-call currency check skips the network
+   * entirely once the selection has moved on, so rapid clicking can't build
+   * an unbounded backlog. */
   var POI_GEOCODE_SPACING_MS = 1000;
   var poiGeocodeQueue = Promise.resolve();
   function enqueuePoiGeocode(task) {
@@ -2765,8 +2914,8 @@
   }
 
   // A structured geocode can return ZERO results when the query carries a
-  // secondary-unit fragment — "250 Broadway, Suite 102, New York, NY" and
-  // "121 North St, Room 300" can geocode to nothing, so those office cards
+  // secondary-unit fragment — "250 Broadway, Suite 102" and "121 North LaSalle
+  // Street, Room 300" can both geocode to nothing, so those office cards
   // silently drop their map pin. Strip any comma-part that reads as a unit
   // designator (Suite/Ste/Room/Rm/Floor/Fl/Unit/Apt/No/#, each carrying a
   // number); the street + city + ZIP that remain resolve to the right building.
@@ -2792,17 +2941,13 @@
       // the selection (or this layer) moved on while we were queued — don't
       // spend a queued request whose result would just be discarded.
       if (isCurrent && !isCurrent()) return null;
-      // NYC Planning GeoSearch /v2/search — keyless, PAD-backed, NYC-scoped by
-      // construction (no viewbox needed). Returns GeoJSON. (§6a.)
-      var url = "https://geosearch.planninglabs.nyc/v2/search?text=" +
-        encodeURIComponent(cleanPoiAddress(address)) + "&size=1";
-      return fetchJSONWithRetry(url, { headers: { "Accept": "application/json" } }, 1)
-        .then(function (fc) {
-          var hit = fc && fc.features && fc.features[0];
-          var c = (hit && hit.geometry && hit.geometry.coordinates) || null;
-          var coords = c ? { lat: c[1], lng: c[0] } : null;
-          poiGeocodeCache[address] = coords;
-          return coords;
+      // poiGeocodeRequest is the fork's provider call, defined with its
+      // geocoder section: cleaned address -> Promise<{lat,lng} | null>. It
+      // rejects on transport failure so the miss is NOT cached below.
+      return poiGeocodeRequest(cleanPoiAddress(address))
+        .then(function (coords) {
+          poiGeocodeCache[address] = coords || null;
+          return coords || null;
         })
         .catch(function () {
           // transient failure — deliberately NOT cached, so a later selection
@@ -2812,6 +2957,7 @@
         });
     });
   }
+  /* ==== ENGINE:END poi-geocode ==== */
 
   /* ==== ENGINE:BEGIN overlay-cards ==== */
   var poiPinIconCache = {};
