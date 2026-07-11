@@ -1,3 +1,4 @@
+/* ==== ENGINE:BEGIN sw-header ==== */
 // App-shell + app-data cache. Never serve live district/roster API responses
 // stale — a stale roster could name the wrong officeholder, and this app's
 // rule is that officeholder data is never guessed or served stale. Bump
@@ -5,19 +6,28 @@
 // removed entry can't live forever; the activate handler deletes every
 // other-named cache.
 //
-// NYC fork (METRO_EXPANSION_PLAYBOOK §4). Thread 1 added the three static
-// geometry anchors (borough / judicial-district / municipal-court) to
-// GEOMETRY_URLS below. Roster files land with the pipeline in Thread 5 and
-// refill ROSTER_URLS. INVARIANT to restore by Thread 6: every file under
-// data/app/ appears in exactly one of the two lists.
-const CACHE_NAME = "nyc-district-explorer-shell-v6";
-
+// The config section below is this fork's METRO block (docs/ENGINE_SYNC.md):
+// a per-city cache name, the shell assets, and the fork's data/app/*.json
+// files split by caching policy — ~static boundary geometry (cache-first,
+// precached) vs officeholder rosters (network-first, never stale). Every file
+// under data/app/ must appear in exactly one of the two data lists;
+// validate_index.py enforces it. The handler logic below the config is shared
+// engine and stays byte-identical across every metro fork.
+//
 // "./" and "./index.html" resolve to the same GitHub Pages document, so we
 // precache only the canonical "./" — caching both stored two ~112 KB-gzip
 // copies under two keys and re-downloaded the page at install. The manifest's
 // start_url is still ./index.html and a deep bookmark may hit /index.html
 // directly; the navigate-request branch in the fetch handler serves the cached
 // "./" shell for any such navigation, so offline boot still works either way.
+/* ==== ENGINE:END sw-header ==== */
+
+/* ==== METRO:BEGIN sw-config ==== */
+// NYC fork (METRO_EXPANSION_PLAYBOOK §4). Thread 1 added the three static
+// geometry anchors (borough / judicial-district / municipal-court) to
+// GEOMETRY_URLS below; the Thread 5 pipeline filled ROSTER_URLS.
+const CACHE_NAME = "nyc-district-explorer-shell-v6";
+
 const SHELL_URLS = [
   "./",
   "./manifest.webmanifest",
@@ -50,7 +60,9 @@ const ROSTER_URLS = [
   "./data/app/ny-assembly-members.json",
   "./data/app/borough-officials.json",
 ];
+/* ==== METRO:END sw-config ==== */
 
+/* ==== ENGINE:BEGIN sw-handlers ==== */
 const PRECACHE_URLS = SHELL_URLS.concat(GEOMETRY_URLS);
 
 function inList(href, list) {
@@ -141,3 +153,4 @@ self.addEventListener("fetch", (event) => {
 
   // Everything else (all live district/roster API calls) hits the network normally.
 });
+/* ==== ENGINE:END sw-handlers ==== */

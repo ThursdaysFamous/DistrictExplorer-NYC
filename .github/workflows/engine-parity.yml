@@ -1,7 +1,7 @@
 name: Engine parity across metro forks
 
-# On-demand check that the fenced ENGINE blocks in index.html are still
-# byte-identical to the reference implementation's DEPLOYED site.
+# On-demand check that the fenced ENGINE blocks in index.html and sw.js are
+# still byte-identical to the reference implementation's DEPLOYED site.
 #
 # The *scheduled* watcher runs in the Chicago repo (DistrictExplorer-CHI) —
 # Chicago is the reference implementation (docs/ENGINE_SYNC.md), so the one
@@ -29,14 +29,32 @@ jobs:
 
       - name: Compare ENGINE blocks against the reference deployment
         id: parity
-        # Stdlib only — no pip install.
+        # Stdlib only — no pip install. index.html and sw.js each carry fenced
+        # engine blocks; both runs merge into one report and one worst-of
+        # status (fail > warn > ok). `touch` + `|| true` keep the merge running
+        # even if one run hard-fails; an empty status then reads as fail.
         continue-on-error: true
         run: |
+          touch parity-report.md status.txt status-sw.txt
           python3 scripts/check_engine_parity.py index.html \
             --against https://chidistricts.com/ \
             --label chicago \
             --report parity-report.md \
-            --status-file status.txt
+            --status-file status.txt || true
+          python3 scripts/check_engine_parity.py sw.js \
+            --against https://chidistricts.com/sw.js \
+            --label "chicago sw.js" \
+            --report parity-report-sw.md \
+            --status-file status-sw.txt || true
+          if [ -f parity-report-sw.md ]; then
+            sed -n '/^## Sibling/,$p' parity-report-sw.md >> parity-report.md
+          fi
+          s1="$(cat status.txt)"; s2="$(cat status-sw.txt)"
+          if [ "$s1" = fail ] || [ "$s2" = fail ] || [ -z "$s1" ] || [ -z "$s2" ]; then
+            echo fail > status.txt
+          elif [ "$s1" = warn ] || [ "$s2" = warn ]; then
+            echo warn > status.txt
+          fi
           echo "status=$(cat status.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Open or update tracking issue
