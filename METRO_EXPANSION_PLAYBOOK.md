@@ -20,27 +20,33 @@ Same working style as `BUILD_PLAYBOOK_1.md`: build in small, cheap, focused thre
 
 **"Engine" code can still speak the reference city's dataset vocabulary (paid for post-launch, PR #9):** the hover explorer is engine, but its fallback property-key lists (`HOVER_NUMBER_KEYS` / `HOVER_NAME_KEYS`, top of the HOVER EXPLORER block) were seeded with Chicago field names (`ward`, `beat_num`, `area_numbe`, `community`…). No NYC dataset uses those keys, so after the port every hover row silently fell to its em-dash fallback — layer label, no district identity — and no gate noticed, because the popup *degrades softly by design*. So the port is not "swap the §1 constants + rewrite the modules" alone: **grep the kept engine for feature-property name literals** and treat every hit as a core constant to re-derive from the new city's observed field names. The durable fix (now in the engine) is that hover identity no longer depends on those lists — see §2's hover-parity rule — but the grep still applies to any future engine code that reads feature properties directly.
 
-**Core constants to swap (line anchors verified against the July 2026 tree — re-locate by name if drifted):**
+**Core constants to swap.** Since the engine-parity change (July 2026 — see `docs/ENGINE_SYNC.md`), everything the shared engine references lives in one `/* ==== METRO:BEGIN config ==== */` block near the top of the script, so most of this table is a single edit. The fenced `/* ==== ENGINE:BEGIN <name> ==== */ … ENGINE:END` blocks are **not part of the port**: they stay byte-identical with the Chicago repo — never adapt code inside a fence (if a fence needs a per-city value, that's a bug: add a METRO config variable in Chicago first and port the diff). When the re-core is done, `python3 scripts/check_engine_parity.py index.html --against https://chidistricts.com/ --strict` must pass, and must keep passing at every thread's gate (`validate_index.py` lints the fence structure on every run).
 
 | What | Where | Chicago value |
 |---|---|---|
-| City bbox + map center | `CHI_BBOX` / `CHI_CENTER`, `index.html:1020–1021` | `[-87.94, 41.64, -87.52, 42.02]`, `[41.8781, -87.6298]` |
-| Permalink sanity gate | `index.html:1416` (independent of `CHI_BBOX` — easy to miss) | `lat 41–42.6, lng -88.6–-87` |
-| Geolocation out-of-area string | `index.html:1456–1457` | "…outside the Chicago area this app covers." |
-| Type-ahead geocoder bias/bbox | Photon call, `index.html:1638–1639` | `lat=41.88&lon=-87.63` + `CHI_BBOX` |
-| POI geocoder viewbox | Nominatim call, `index.html:2076–2077` | `CHI_BBOX`, `bounded=1` |
-| Group taxonomy | `GROUPS`, `index.html:1723–1728` | political / safety / schools / geography |
-| Z-order ranking | `LAYER_AREA_RANK`, `index.html:1734–1766` | all 22 Chicago layer ids (see §3 rule) |
-| Socrata host | `socrataRouteUrls`, `index.html:2553–2555` | `data.cityofchicago.org` |
-| TIGERweb state filter | `loadTigerLayer`, `index.html:3521` | `STATE='17'` |
-| "Data last verified" date | `index.html:4586` | hardcoded string |
-| Debug namespace | `window.ChiExplorer`, `index.html:4590` — **twinned in `scripts/smoke_test.mjs:64`**; rename both or neither | — |
-| Preconnect/dns-prefetch hosts | `index.html:19–24` | Chicago data hosts |
-| Branding | `<title>`/meta (6–11), palette `:root` (31–55), masthead (905–906), footer sources (976–986), feedback email (1498) | Chicago flag palette, star motif |
+| Metro id + display name | `THIS_METRO` / `METRO_NAME` — METRO config block | `"chicago"`, `"Chicago"` |
+| City bbox + map center | `METRO_BBOX` / `METRO_CENTER` — METRO config block | `[-87.94, 41.64, -87.52, 42.02]`, `[41.8781, -87.6298]` |
+| Permalink sanity gate | `PERMALINK_GATE` — METRO config block (the *greater* metro area, deliberately wider than `METRO_BBOX`) | `lat 41–42.6, lng -88.6–-87` |
+| Socrata portal host + app token | `SOCRATA_HOST` / `SOCRATA_APP_TOKEN` — METRO config block (token stays `""` where the portal doesn't throttle; §6b) | `data.cityofchicago.org`, `""` |
+| Feedback targets | `REPO_ISSUES` / `FEEDBACK_SUBJECT` — METRO config block (the fork's OWN repo — a stale copy files the new city's bug reports against Chicago) | `…/DistrictExplorer-CHI/issues/new` |
+| Cross-metro footer list | `METRO_EXPLORERS` — METRO config block; see "Shared, not swapped" below | canonical list, all forks |
+| Geolocation out-of-area string | derived from `METRO_NAME` inside a fenced engine block — no per-city edit | — |
+| Map minZoom | `L.map(...)` boot line, MAP section | `9` (NYC uses `10`) |
+| Type-ahead geocoder bias/bbox | Photon call — the geocoder is metro code, not engine; NYC swapped the provider wholesale (§6a) | `lat=41.88&lon=-87.63` + `METRO_BBOX` |
+| POI geocoder viewbox | Nominatim call in the POI queue | `METRO_BBOX`, `bounded=1` |
+| Group taxonomy | `GROUPS` | political / safety / schools / geography |
+| Z-order ranking | `LAYER_AREA_RANK` | all 22 Chicago layer ids (see §3 rule) |
+| TIGERweb state filter | `loadTigerLayer` | `STATE='17'` |
+| "Data last verified" date | near the boot block | hardcoded string |
+| Debug namespace | `window.ChiExplorer` — **twinned in `scripts/smoke_test.mjs`**; rename both or neither | — |
+| Preconnect/dns-prefetch hosts | `<head>` | Chicago data hosts |
+| Branding + marker art | `<title>`/meta, palette `:root`, masthead, footer sources; marker geometry in the CORE section (Chicago: six-pointed star + water-taxi seal; NYC: pin + borough seals) | Chicago flag palette, star motif |
 
-**Sibling files to swap:** `CNAME` (custom domain — preserved purely by shipping the file in the Pages artifact), `manifest.webmanifest` (name + theme colors), `icons/` (192/512 PNGs), `README.md` (entirely city-specific), and `sw.js`'s two hardcoded lists (§4). `.github/workflows/` carry over structurally — only constants and dataset names change (§9 shows the NYC mapping).
+(The original table's `index.html:NNNN` line anchors are gone — they had already drifted by the time of the first port. Re-locate by name; the config-block rows don't need locating at all.)
 
-**Shared, not swapped — the footer's cross-metro links:** `METRO_EXPLORERS` in the boot block is one canonical list of every deployed explorer, identical across forks; only `THIS_METRO` (the fork's own id, which the renderer skips) changes per fork. When a new metro launches, add its entry to `METRO_EXPLORERS` in **every** sibling fork, not just the new one.
+**Sibling files to swap:** `CNAME` (custom domain — preserved purely by shipping the file in the Pages artifact), `manifest.webmanifest` (name + theme colors), `icons/` (192/512 PNGs), `README.md` (entirely city-specific), and `sw.js`'s two hardcoded lists (§4). `.github/workflows/` carry over structurally — only constants and dataset names change (§9 shows the NYC mapping), except `engine-parity.yml`, which carries over with its `schedule:` block removed: the scheduled cross-fork watcher runs only in the Chicago repo (one tracking issue, in the reference repo), siblings keep `workflow_dispatch` for on-demand checks. `docs/ENGINE_SYNC.md` and `scripts/check_engine_parity.py` ship **verbatim** — they are engine.
+
+**Shared, not swapped — the footer's cross-metro links:** `METRO_EXPLORERS` in the METRO config block is one canonical list of every deployed explorer, identical across forks; only `THIS_METRO` (the fork's own id, which the fenced `metro-links` engine block skips at render) changes per fork. When a new metro launches, add its entry to `METRO_EXPLORERS` in **every** sibling fork, not just the new one — ported as the same small config diff per `docs/ENGINE_SYNC.md`, never re-typed.
 
 **Test/gate constants to re-derive (never copy):** `scripts/smoke_test.mjs` `POINT` / `OFFLINE` / `EXPECT_LAYERS` (lines 36–38), `EXPECT_DISTRICT` (87), the second re-highlight point (124/135); `scripts/validate_index.py` `MIN_REGISTER_LAYER`, `GEOMETRY_FILES`, `ROSTER_FILES`; every scraper/builder count guard.
 
@@ -82,13 +88,13 @@ Also reusable as-is: the `ward` module's two-live-datasets join (boundary + rost
 ## 3. The porting checklist (in order)
 
 1. **Fork** the Chicago repo. Don't start from scratch — the engine, gates, and CI shape are the value.
-2. **Swap the §1 core constants** and branding; rename the debug namespace in both files or leave it.
+2. **Swap the METRO config block + the remaining §1 constants** and branding; rename the debug namespace in both files or leave it. Never edit inside an `ENGINE:BEGIN/END` fence — when the re-core is done, `check_engine_parity.py index.html --against https://chidistricts.com/ --strict` must pass, and stays a per-thread gate from here on.
 3. **Decide the layer roster** for your city: walk Chicago's 22 layers, map each to the local equivalent, and be explicit where **no honest analog exists** — drop the layer rather than invent geometry or names for an appointed/citywide body. Add local layers Chicago lacks. Then write the full `LAYER_AREA_RANK`, largest→smallest. **Rule: every registered layer id appears in the rank, no exceptions** — an id missing from the list is invisible to both consumers of the rank: `reorderActiveLayers` (`index.html:1887`) never restacks it, and `hoverContainingLayers` (`index.html:4291`) omits it from hover civic profiles entirely. (Chicago itself shipped this bug — `ward-precinct` was missing from the rank until it was fixed alongside this playbook.) Sub-layers deliberately rank just *before* their parent so the parent outline frames the fills — see the police-beat comment in the Chicago rank.
 4. **Build the data registry** (Part II §6 is the model): one row per layer, geometry source + roster source, each labeled VERIFIED only after a live fetch you performed. Record dataset IDs, exact query URLs, and observed field names.
 5. **Pick the offline anchors** (§4) and the smoke-test ground-truth points — two positive points landing in different districts, plus the §4 negative point where the geography allows one.
 6. **Map the pipeline**: for each roster, which scraper/builder pair template applies, which fetch engine, and the count guards (§9 is the model). Don't defer *every* roster to the pipeline thread: land the cheapest real one (a no-scrape public file, congress-legislators-style) during the modules thread itself — real data flushes factory paths that empty placeholders never exercise (see §1's re-core surgery notes).
 7. **Re-derive every gate constant** (§1's last paragraph) and both `sw.js` lists.
-8. **Swap deploy**: CNAME, manifest, icons, README, footer attribution; set `THIS_METRO` and add the new metro to `METRO_EXPLORERS` here **and in every sibling fork** (§1). The `deploy-pages.yml` rsync exclude list is generic — but confirm nothing city-new (e.g. a large source GeoJSON) slips into the artifact.
+8. **Swap deploy**: CNAME, manifest, icons, README, footer attribution; set `THIS_METRO` and add the new metro to `METRO_EXPLORERS` in the METRO config block here **and in every sibling fork** (§1 — port the same config diff to each sibling, per `docs/ENGINE_SYNC.md`). The `deploy-pages.yml` rsync exclude list is generic — but confirm nothing city-new (e.g. a large source GeoJSON) slips into the artifact.
 9. **Cross-group parity audit** before calling assembly done: for each field one group's cards render (office address, inline pin, map pin, phone, oversight links), check every other group's cards that *could* carry it. NYC shipped its political cards name-only while the safety and school cards already carried addresses and pins — no gate catches this class of gap; only a deliberate side-by-side pass does. The audit has a **second axis: surfaces, not just groups.** The hover explorer renders every polygon layer too, and it fails *soft* by design (a missed property is a blank row, not an error card) — so also do a **hover sweep**: toggle every polygon layer on, hover each smoke-test ground-truth point, and confirm every row shows a real identity matching its card's headline, not the em-dash fallback. NYC shipped every hover row label-only (fixed in PR #9) because no automated gate exercises the popup.
 
 ## 4. The offline-anchor rule
@@ -168,7 +174,7 @@ Both return GeoJSON; NYC-scoped by construction, so no viewbox needed. Display t
 
 ### 6b. Socrata specifics NYC adds over Chicago
 
-- **App token (new requirement):** anonymous NYC portal requests hit WAF throttling (403s observed on `.json` paths during research). Register one free Socrata app token. Runtime: append `$$app_token=` via a top-of-file constant in `index.html` — it's a throttling identifier, not a secret; public exposure is Socrata's intended use. CI scrapers: send `X-App-Token` from a repo secret.
+- **App token (new requirement):** anonymous NYC portal requests hit WAF throttling (403s observed on `.json` paths during research). Register one free Socrata app token. Runtime: set `SOCRATA_APP_TOKEN` in the METRO config block (the fenced `app-token` engine block appends `$$app_token=` wherever a token is set) — it's a throttling identifier, not a secret; public exposure is Socrata's intended use. CI scrapers: send `X-App-Token` from a repo secret.
 - **Map-type datasets** (`h2n3-98hq`, `uh7r-6nya`, `7vpq-4bh4`): give `loadSocrataGeoJSON` a `preferExport` per-dataset override (Part I §5.3) or use the sibling ArcGIS FeatureServer.
 - **Record caps:** several NYC layers approach or exceed route 1's `$limit=1000` (sectors 303 is fine; election districts ~5,000 is not — use the ArcGIS endpoint with `resultOffset` paging).
 
@@ -280,7 +286,7 @@ Every builder that splices text keeps the `js_string()` `</script>` + U+2028/U+2
 
 ## 10. Thread sequence (port order — differs from Chicago's greenfield order)
 
-- **Thread 0 — Fork & re-core.** Swap every Part I §1 constant, delete the Chicago modules (~`index.html:2712–4263`) leaving one stub layer, swap both geocoders to GeoSearch (§6a), temporary `EXPECT_LAYERS=1`. Deliverable: the engine boots on an NYC map with one stub card.
+- **Thread 0 — Fork & re-core.** Swap the METRO config block + every remaining Part I §1 constant, delete the Chicago modules (~`index.html:2712–4263`) leaving one stub layer, swap both geocoders to GeoSearch (§6a), temporary `EXPECT_LAYERS=1`. Deliverable: the engine boots on an NYC map with one stub card **and `check_engine_parity.py --against https://chidistricts.com/ --strict` passes**.
 - **Thread 1 — Offline anchors + Geography.** Convert the three §8 static files; register `borough`, `judicial-district`, `municipal-court`, `neighborhood`, `zip-code`; pin the smoke-test ground truth; Rockaways/islands MultiPolygon spot-check.
 - **Thread 2 — Safety.** 5 layers; `nypd-precinct-info.json` ships as empty placeholder.
 - **Thread 3 — Schools.** 6 layers; the honest choice-based empty states for MS/HS; `cec-members.json` placeholder.
