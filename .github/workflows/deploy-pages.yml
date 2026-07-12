@@ -20,6 +20,15 @@ name: Deploy to GitHub Pages
 # The exclude list below is the ONLY thing standing between "app files" and "app
 # files + 5 MB of build inputs". Keep data/app in and data/source + data/*.geojson
 # out when either moves.
+#
+# ENGINE ASSEMBLY (docs/MECHANIZATION_PLAYBOOK.md Conversion 1; NYC work order
+# 1.4): before the site is assembled, the fenced ENGINE blocks in index.html
+# and sw.js are replaced from the engine release pinned in engine.lock.json —
+# download, sha256-verify against the lockfile, splice (scripts/apply_engine.py),
+# then re-run the static merge gate on the assembled tree. Cross-fork parity is
+# true by construction: every fork deploys the same hash-pinned bytes. NYC's
+# committed blocks are byte-identical to engine-v1.0.0, so assembly is a no-op
+# until the first engine bump.
 
 on:
   push:
@@ -47,6 +56,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The TWO spaces between hash and filename are load-bearing — a single
+      # space breaks `sha256sum --check` parsing. CHI is public, so the
+      # built-in token suffices for the release download.
+      - name: Fetch + verify + apply pinned engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver="$(jq -r .engine_version engine.lock.json)"
+          gh release download "$ver" \
+            --repo ThursdaysFamous/DistrictExplorer-CHI \
+            --pattern 'engine.bundle.js' --pattern 'engine.manifest.json' --clobber
+          echo "$(jq -r .sha256 engine.lock.json)  engine.bundle.js" | sha256sum --check -
+          python3 scripts/apply_engine.py
+          python3 scripts/validate_index.py index.html
+          # Work order 1.4 also asserts the assembled tree against the bundle
+          # via `check_engine_parity.py --against-bundle engine.manifest.json
+          # --strict`; that flag doesn't exist in the shared script yet (it
+          # must land CHI-first per docs/ENGINE_SYNC.md — the release is the
+          # scripts' distribution channel). Until it ships, the same invariant
+          # is already a hard FAIL inside apply_engine.py: lockfile-sha256 +
+          # manifest cross-checks, per-block byte counts, and a splice
+          # self-check that re-extracts the result and compares it to the
+          # bundle byte-for-byte.
+
       - name: Assemble site (app files only — drop scripts/docs/raw data)
         run: |
           mkdir _site
@@ -59,6 +92,9 @@ jobs:
             --exclude='data/source' \
             --exclude='data/*.geojson' \
             --exclude='node_modules' \
+            --exclude='engine.lock.json' \
+            --exclude='engine.bundle.js' \
+            --exclude='engine.manifest.json' \
             --exclude='CLAUDE.md' \
             ./ _site/
           echo "Published tree:" && find _site -type f | sort

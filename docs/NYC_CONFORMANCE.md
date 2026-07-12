@@ -274,9 +274,9 @@ operator steps).
 | 0.1 | Three pointer stubs, README fixed | files ≤20 lines, CHI URLs present | ☑ 2026-07-12 (15/15/16 lines, CHI URLs in all three, zero Chicago build-log content) |
 | 0.2 | validate_sources ported, school-zone check folded in | offline gate green; typo drill FAILs | ☑ 2026-07-12 (`--offline` exit 0; full online run 0 FAIL · 0 WARN · 24 OK; drill below) |
 | 0.3 | Actions-can-create-PRs confirmed | API/screenshot evidence | ☑ 2026-07-12 (empirical — see evidence note below the drill table) |
-| 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☐ |
-| 1.5 | Corruption drill | failing run URL recorded | ☐ |
-| 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☐ |
+| 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☑ 2026-07-12 (engine-v1.0.0 pinned, sha `47d6d1ff…`; local assembly run: sha256sum OK, 45+2 blocks spliced **0 updated**, `git diff index.html sw.js` empty; note: the 1.4 snippet's `check_engine_parity.py --against-bundle` flag doesn't exist in the shared script yet — must land CHI-first; until then apply_engine.py's splice self-check enforces the same assertion, documented in deploy-pages.yml) |
+| 1.5 | Corruption drill | failing run URL recorded | ☐ (drill run pending — see evidence table) |
+| 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☐ blocked: needs one clean assembled deploy on main after 1.4 merges, then delete in a follow-up PR |
 | 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☐ |
 | 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☐ |
 | 2.3–2.4 | `--check` in CI + drift drill | failing run URL recorded | ☐ |
