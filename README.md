@@ -37,7 +37,7 @@ The URL hash mirrors your current view (`#point=40.71274,-74.00602&layers=boroug
 
 ## Architecture
 
-Stable core + pluggable layer modules, all inside `index.html`. The engine contract and build history live in [`docs/BUILD_PLAYBOOK_1.md`](docs/BUILD_PLAYBOOK_1.md); the NYC port plan lives in [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md).
+Stable core + pluggable layer modules, all inside `index.html`. The engine contract and build history live in the Chicago repo's [`docs/BUILD_PLAYBOOK_1.md`](https://github.com/ThursdaysFamous/DistrictExplorer-CHI/blob/main/docs/BUILD_PLAYBOOK_1.md) — this repo carries only a [pointer stub](docs/BUILD_PLAYBOOK_1.md); the NYC port plan lives in [`METRO_EXPANSION_PLAYBOOK.md`](METRO_EXPANSION_PLAYBOOK.md).
 
 - **Core (metro-agnostic, ~60–65% of `index.html`)**: Leaflet map, click-to-select + GeoSearch geocoder (debounced, NYC-scoped), global `{selectedPoint, sequence}` state where a monotonic sequence counter discards stale async results, shared `sanitize` / `pointInGeometry` / `fetchJSONWithRetry` utilities, the four layer factories (`registerPolygonLayer` / `registerSchoolZone` / `registerCpsNetwork` / `registerIlgaChamber`) and the Socrata / ArcGIS / TIGERweb loaders, layer registry + result-card framework with per-layer failure isolation, selected-boundary highlight, URL-hash permalinks.
 - **Modules**: each layer registers `{id, group, label, overlay:{load, style}, query(point, seq), render(result)}`. Overlays lazy-load on first toggle and are cached; `query` runs a local point-in-polygon test against the cached boundaries (or nearest-N haversine for point layers).
@@ -60,14 +60,16 @@ Stable core + pluggable layer modules, all inside `index.html`. The engine contr
 
 ```
 index.html                   the entire app (styles, engine, layer modules)
-METRO_EXPANSION_PLAYBOOK.md   the metro-porting recipe (Part I) + NYC worked example & build log (Part II)
+METRO_EXPANSION_PLAYBOOK.md   pointer stub — the master (porting recipe + NYC worked example) lives in the CHI repo
 scripts/smoke_test.mjs        Playwright boot/behaviour smoke test (runs on every PR)
 scripts/validate_index.py     static gate: layer ids + z-order rank, sw.js cache lists, anchor counts, roster floors
+scripts/validate_sources.py   monthly source-freshness gate: dataset ids resolve, newer editions flagged, redistricting watch
 scripts/build_embedded_boundaries.py  simplifies source GeoJSON into data/app/*.json (the 3 offline anchors)
 scripts/*.py                  NYC scraper/builder pairs (state legislature, council, NYPD, CEC, congress)
-.github/workflows/            per-PR smoke test · deploy · five weekly roster crons (each opens a PR for review)
-docs/BUILD_PLAYBOOK_1.md      engine architecture contract + Chicago build/status log
-docs/OPTIMIZATION_PLAYBOOK.md optimization & refinement playbook
+.github/workflows/            per-PR smoke test · deploy · five weekly roster crons (each opens a PR for review) · monthly source validation (opens a tracking issue)
+docs/BUILD_PLAYBOOK_1.md      pointer stub — the master (engine contract + build log) lives in the CHI repo
+docs/OPTIMIZATION_PLAYBOOK.md pointer stub — the master lives in the CHI repo
+docs/REDISTRICTING_RUNBOOK.md pointer stub — the master (fleet-wide runbook) lives in the CHI repo
 ```
 
 > **Operator setup still pending** (playbook §11): replace the placeholder PWA icons in `icons/app/`, and supply the initial `borough-officials.json` (5 Borough Presidents + 5 District Attorneys, hand-verified — officeholders are never guessed). All CI secrets (`SOCRATA_APP_TOKEN`, `NYSENATE_API_KEY`, `OPENSTATES_API_KEY`) are in place.
