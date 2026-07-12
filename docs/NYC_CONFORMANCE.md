@@ -156,6 +156,15 @@ was always CHI-side and is superseded by construction.
 *Phase DONE when:* first automated bump PR from CHI merges green here, AND the corruption
 drill URL is recorded.
 
+*Phase 1 DONE 2026-07-13.* Both conditions met: the corruption drill is recorded in the
+evidence table below (run 29209945390), and the first automated bump PR —
+[#23](https://github.com/ThursdaysFamous/DistrictExplorer-NYC/pull/23), opened by
+`engine-bump.yml` from CHI's `engine-v1.0.1` fan-out (dispatch run
+[29212955843](https://github.com/ThursdaysFamous/DistrictExplorer-NYC/actions/runs/29212955843),
+all gates green; branch smoke run 29213011493 green) — merged. The bump delivered the
+`--against-bundle` mode in the shared parity script; the explicit post-assembly assertion
+lines now live in `deploy-pages.yml`, and `engine-parity.yml` is deleted (1.6).
+
 ---
 
 ## Phase 2 — Conversion 2 adoption (generated docs/config)
@@ -274,9 +283,9 @@ operator steps).
 | 0.1 | Three pointer stubs, README fixed | files ≤20 lines, CHI URLs present | ☑ 2026-07-12 (15/15/16 lines, CHI URLs in all three, zero Chicago build-log content) |
 | 0.2 | validate_sources ported, school-zone check folded in | offline gate green; typo drill FAILs | ☑ 2026-07-12 (`--offline` exit 0; full online run 0 FAIL · 0 WARN · 24 OK; drill below) |
 | 0.3 | Actions-can-create-PRs confirmed | API/screenshot evidence | ☑ 2026-07-12 (empirical — see evidence note below the drill table) |
-| 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☑ 2026-07-12 (engine-v1.0.0 pinned, sha `47d6d1ff…`; local assembly run: sha256sum OK, 45+2 blocks spliced **0 updated**, `git diff index.html sw.js` empty; note: the 1.4 snippet's `check_engine_parity.py --against-bundle` flag doesn't exist in the shared script yet — must land CHI-first; until then apply_engine.py's splice self-check enforces the same assertion, documented in deploy-pages.yml) |
+| 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☑ 2026-07-12 (engine-v1.0.0 pinned, sha `47d6d1ff…`; local assembly run: sha256sum OK, 45+2 blocks spliced **0 updated**, `git diff index.html sw.js` empty; note: the 1.4 snippet's `check_engine_parity.py --against-bundle` flag doesn't exist in the shared script yet — must land CHI-first; until then apply_engine.py's splice self-check enforces the same assertion, documented in deploy-pages.yml. **Resolved 2026-07-13:** the flag landed CHI-side (CHI #91), shipped in `engine-v1.0.1`, arrived here via bump PR #23; the explicit `--strict` assertion lines are now in deploy-pages.yml) |
 | 1.5 | Corruption drill | failing run URL recorded | ☑ 2026-07-12 (failed at `sha256sum --check` — see evidence table; first attempt exposed that the one-job deploy layout could never run on a branch — github-pages environment branch protection — fixed by splitting assemble/deploy jobs) |
-| 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☐ blocked: needs one clean assembled deploy on main after 1.4 merges, then delete in a follow-up PR |
+| 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☑ 2026-07-13 (clean assembled deploys on main: run 29212551023 after #22 merged, again after bump PR #23; workflow deleted + `--against-bundle --strict` assertion lines added in the close-out PR) |
 | 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☐ |
 | 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☐ |
 | 2.3–2.4 | `--check` in CI + drift drill | failing run URL recorded | ☐ |
