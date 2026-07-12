@@ -271,9 +271,9 @@ operator steps).
 
 | # | Item | Check | Done |
 |---|---|---|---|
-| 0.1 | Three pointer stubs, README fixed | files ≤20 lines, CHI URLs present | ☐ |
-| 0.2 | validate_sources ported, school-zone check folded in | offline gate green; typo drill FAILs | ☐ |
-| 0.3 | Actions-can-create-PRs confirmed | API/screenshot evidence | ☐ |
+| 0.1 | Three pointer stubs, README fixed | files ≤20 lines, CHI URLs present | ☑ 2026-07-12 (15/15/16 lines, CHI URLs in all three, zero Chicago build-log content) |
+| 0.2 | validate_sources ported, school-zone check folded in | offline gate green; typo drill FAILs | ☑ 2026-07-12 (`--offline` exit 0; full online run 0 FAIL · 0 WARN · 24 OK; drill below) |
+| 0.3 | Actions-can-create-PRs confirmed | API/screenshot evidence | ☑ 2026-07-12 (empirical — see evidence note below the drill table) |
 | 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☐ |
 | 1.5 | Corruption drill | failing run URL recorded | ☐ |
 | 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☐ |
@@ -292,4 +292,14 @@ operator steps).
 |---|---|---|---|
 | Engine hash corruption (1.5) | | | lockfile restored |
 | Generated-region drift (2.4) | | | regeneration |
-| validate_sources manifest typo (0.2) | | | typo reverted |
+| validate_sources manifest typo (0.2) | local pre-CI run (no run URL): `872g-cjhh`→`872g-cjhX` in the manifest, `python3 scripts/validate_sources.py --offline` exited **1** with `FAIL — City Council District (51) — dataset id 872g-cjhX not found in index.html — manifest is out of sync with the app (update scripts/validate_sources.py)`; exit 0 after revert | 2026-07-12 | typo reverted |
+
+**0.3 evidence (2026-07-12).** The direct check could not run from the sandbox: the
+session's egress proxy answers `GET repos/ThursdaysFamous/DistrictExplorer-NYC/actions/permissions/workflow`
+with HTTP 403 `"Access to this GitHub Actions path is not permitted through this proxy"`.
+Recorded empirically instead, which is conclusive: [PR #6](https://github.com/ThursdaysFamous/DistrictExplorer-NYC/pull/6)
+was created 2026-07-10 by `github-actions[bot]` via `gh pr create` running with
+`GH_TOKEN: ${{ github.token }}` (`update-ny-legislature-roster.yml`), and PR creation with
+the built-in Actions token hard-fails ("GitHub Actions is not permitted to create or
+approve pull requests") unless the Settings → Actions → General toggle is ON. An operator
+`gh api` run from outside the sandbox can double-confirm at any time.
