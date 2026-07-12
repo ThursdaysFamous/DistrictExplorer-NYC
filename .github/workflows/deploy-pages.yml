@@ -26,9 +26,9 @@ name: Deploy to GitHub Pages
 # and sw.js are replaced from the engine release pinned in engine.lock.json —
 # download, sha256-verify against the lockfile, splice (scripts/apply_engine.py),
 # then re-run the static merge gate on the assembled tree. Cross-fork parity is
-# true by construction: every fork deploys the same hash-pinned bytes. NYC's
-# committed blocks are byte-identical to engine-v1.0.0, so assembly is a no-op
-# until the first engine bump.
+# true by construction: every fork deploys the same hash-pinned bytes. The
+# bump PRs commit the applied files, so the committed blocks always match the
+# pinned engine and assembly stays a verifying no-op.
 
 on:
   push:
@@ -73,15 +73,13 @@ jobs:
           echo "$(jq -r .sha256 engine.lock.json)  engine.bundle.js" | sha256sum --check -
           python3 scripts/apply_engine.py
           python3 scripts/validate_index.py index.html
-          # Work order 1.4 also asserts the assembled tree against the bundle
-          # via `check_engine_parity.py --against-bundle engine.manifest.json
-          # --strict`; that flag doesn't exist in the shared script yet (it
-          # must land CHI-first per docs/ENGINE_SYNC.md — the release is the
-          # scripts' distribution channel). Until it ships, the same invariant
-          # is already a hard FAIL inside apply_engine.py: lockfile-sha256 +
-          # manifest cross-checks, per-block byte counts, and a splice
-          # self-check that re-extracts the result and compares it to the
-          # bundle byte-for-byte.
+          # The parity checker, demoted (work order 1.4 / playbook migration
+          # step 4): no longer a cross-fork drift detector — it asserts
+          # post-assembly that the spliced blocks equal the downloaded
+          # bundle. The --against-bundle mode arrived via bump PR #23
+          # (engine-v1.0.1 shipped the updated shared script).
+          python3 scripts/check_engine_parity.py index.html --against-bundle engine.manifest.json --strict
+          python3 scripts/check_engine_parity.py sw.js --against-bundle engine.manifest.json --strict
 
       - name: Assemble site (app files only — drop scripts/docs/raw data)
         run: |
