@@ -275,7 +275,7 @@ operator steps).
 | 0.2 | validate_sources ported, school-zone check folded in | offline gate green; typo drill FAILs | ☑ 2026-07-12 (`--offline` exit 0; full online run 0 FAIL · 0 WARN · 24 OK; drill below) |
 | 0.3 | Actions-can-create-PRs confirmed | API/screenshot evidence | ☑ 2026-07-12 (empirical — see evidence note below the drill table) |
 | 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☑ 2026-07-12 (engine-v1.0.0 pinned, sha `47d6d1ff…`; local assembly run: sha256sum OK, 45+2 blocks spliced **0 updated**, `git diff index.html sw.js` empty; note: the 1.4 snippet's `check_engine_parity.py --against-bundle` flag doesn't exist in the shared script yet — must land CHI-first; until then apply_engine.py's splice self-check enforces the same assertion, documented in deploy-pages.yml) |
-| 1.5 | Corruption drill | failing run URL recorded | ☐ (drill run pending — see evidence table) |
+| 1.5 | Corruption drill | failing run URL recorded | ☑ 2026-07-12 (failed at `sha256sum --check` — see evidence table; first attempt exposed that the one-job deploy layout could never run on a branch — github-pages environment branch protection — fixed by splitting assemble/deploy jobs) |
 | 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☐ blocked: needs one clean assembled deploy on main after 1.4 merges, then delete in a follow-up PR |
 | 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☐ |
 | 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☐ |
@@ -290,7 +290,7 @@ operator steps).
 
 | Drill | Failing run URL | Date | Cleared by |
 |---|---|---|---|
-| Engine hash corruption (1.5) | | | lockfile restored |
+| Engine hash corruption (1.5) | https://github.com/ThursdaysFamous/DistrictExplorer-NYC/actions/runs/29209945390 — `assemble` failed at step "Fetch + verify + apply pinned engine": `engine.bundle.js: FAILED / sha256sum: WARNING: 1 computed checksum did NOT match / exit 1`; deploy job skipped (main-only). Invalid first attempt for the record: run 29209843703 died at github-pages environment branch protection with zero steps run, which forced the assemble/deploy job split. | 2026-07-12 | lockfile restored |
 | Generated-region drift (2.4) | | | regeneration |
 | validate_sources manifest typo (0.2) | local pre-CI run (no run URL): `872g-cjhh`→`872g-cjhX` in the manifest, `python3 scripts/validate_sources.py --offline` exited **1** with `FAIL — City Council District (51) — dataset id 872g-cjhX not found in index.html — manifest is out of sync with the app (update scripts/validate_sources.py)`; exit 0 after revert | 2026-07-12 | typo reverted |
 
