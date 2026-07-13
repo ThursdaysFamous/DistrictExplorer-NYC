@@ -1,26 +1,56 @@
 {
-  "_comment": "Operator-maintained source for Borough President + District Attorney (METRO_EXPANSION_PLAYBOOK §11.3). Fill each name from the official BP/DA site and set url to that official page, then run scripts/build_borough_officials.py. Leave a name null to omit it (the card then links to the NYC Green Book instead of naming anyone). NEVER guess a name — these are elected offices and a wrong name is a real error.",
-  "_verified": null,
+  "_comment": "Operator-maintained source for Borough President + District Attorney (METRO_EXPANSION_PLAYBOOK 11.3). Fill each name from the official BP/DA site and set url to that official page, then run scripts/build_borough_officials.py. Leave a name null to omit it (the card then links to the NYC Green Book instead of naming anyone). NEVER guess a name - these are elected offices and a wrong name is a real error.",
+  "_verified": "2026-07-13 - each name confirmed on the office's own official site (Queens BP canonical queensbp.nyc.gov; SI DA statenislandda.org); BP set cross-checked against Wikipedia. Re-verify before/after each election cycle.",
   "boroughs": {
     "Manhattan": {
-      "bp": { "name": null, "url": null },
-      "da": { "name": null, "url": null }
+      "bp": {
+        "name": "Brad Hoylman-Sigal",
+        "url": "https://www.manhattanbp.nyc.gov/"
+      },
+      "da": {
+        "name": "Alvin Bragg",
+        "url": "https://manhattanda.org/"
+      }
     },
     "Bronx": {
-      "bp": { "name": null, "url": null },
-      "da": { "name": null, "url": null }
+      "bp": {
+        "name": "Vanessa L. Gibson",
+        "url": "https://bronxboropres.nyc.gov/"
+      },
+      "da": {
+        "name": "Darcel D. Clark",
+        "url": "https://bronxda.nyc.gov/"
+      }
     },
     "Brooklyn": {
-      "bp": { "name": null, "url": null },
-      "da": { "name": null, "url": null }
+      "bp": {
+        "name": "Antonio Reynoso",
+        "url": "https://www.brooklynbp.nyc.gov/"
+      },
+      "da": {
+        "name": "Eric Gonzalez",
+        "url": "https://www.brooklynda.org/"
+      }
     },
     "Queens": {
-      "bp": { "name": null, "url": null },
-      "da": { "name": null, "url": null }
+      "bp": {
+        "name": "Donovan Richards Jr.",
+        "url": "https://www.queensbp.nyc.gov/"
+      },
+      "da": {
+        "name": "Melinda Katz",
+        "url": "https://queensda.org/"
+      }
     },
     "Staten Island": {
-      "bp": { "name": null, "url": null },
-      "da": { "name": null, "url": null }
+      "bp": {
+        "name": "Vito Fossella",
+        "url": "https://www.statenislandusa.com/"
+      },
+      "da": {
+        "name": "Michael E. McMahon",
+        "url": "https://www.statenislandda.org/"
+      }
     }
   }
 }

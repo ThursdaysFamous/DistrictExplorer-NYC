@@ -1,1 +1,52 @@
-{}
+{
+"Manhattan": {
+"bp": {
+"name": "Brad Hoylman-Sigal",
+"url": "https://www.manhattanbp.nyc.gov/"
+},
+"da": {
+"name": "Alvin Bragg",
+"url": "https://manhattanda.org/"
+}
+},
+"Bronx": {
+"bp": {
+"name": "Vanessa L. Gibson",
+"url": "https://bronxboropres.nyc.gov/"
+},
+"da": {
+"name": "Darcel D. Clark",
+"url": "https://bronxda.nyc.gov/"
+}
+},
+"Brooklyn": {
+"bp": {
+"name": "Antonio Reynoso",
+"url": "https://www.brooklynbp.nyc.gov/"
+},
+"da": {
+"name": "Eric Gonzalez",
+"url": "https://www.brooklynda.org/"
+}
+},
+"Queens": {
+"bp": {
+"name": "Donovan Richards Jr.",
+"url": "https://www.queensbp.nyc.gov/"
+},
+"da": {
+"name": "Melinda Katz",
+"url": "https://queensda.org/"
+}
+},
+"Staten Island": {
+"bp": {
+"name": "Vito Fossella",
+"url": "https://www.statenislandusa.com/"
+},
+"da": {
+"name": "Michael E. McMahon",
+"url": "https://www.statenislandda.org/"
+}
+}
+}
