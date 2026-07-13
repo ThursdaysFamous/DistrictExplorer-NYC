@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-NYC District Explorer: a single-file, dependency-light web app. Click a point in New York City (or search an address) and it reports every civic district containing that point and who represents you there — boroughs, council/community/legislative districts, NYPD precincts/sectors, school zones, and more. Deployed as a static site to `nyc.chidistricts.com` (see `CNAME`). This is a metro fork of the Chicago reference implementation (`ThursdaysFamous/DistrictExplorer-CHI`); the build record for the port is archived at CHI `docs/archive/METRO_EXPANSION_NYC.md`, and the conformance work order lives at `docs/NYC_CONFORMANCE.md`.
+NYC District Explorer: a single-file, dependency-light web app. Click a point in New York City (or search an address) and it reports every civic district containing that point and who represents you there — boroughs, council/community/legislative districts, NYPD precincts/sectors, school zones, and more. Deployed as a static site to `nyc.chidistricts.com` (see `CNAME`). This is a metro fork of the Chicago reference implementation (`ThursdaysFamous/DistrictExplorer-CHI`); the build record for the port is archived at CHI `docs/archive/METRO_EXPANSION_NYC.md`, and the completed conformance work order is archived at `docs/archive/NYC_CONFORMANCE.md`.
 
 **There is no build step, no framework, and no server-side code.** The entire app — styles, core, and all layer modules — lives inline in `index.html`. `sw.js` is the service worker; `data/app/*.json` are runtime-fetched data files. Everything else is data pipeline, scrapers, or CI.
 

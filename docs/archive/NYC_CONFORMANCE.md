@@ -1,5 +1,8 @@
 # NYC Conformance — adopting the mechanized structure
 
+**ARCHIVED 2026-07-13 — executed in full.** Phases 0–3 done with every drill's failing
+run URL recorded below. Moved to `docs/archive/` per this work order's own mandate.
+
 Status: **work order, not a living document.** This file exists to be executed once and
 archived. When the final checklist is fully green, move this file to `docs/archive/` (or
 delete it) — a completed work order left at `docs/` is exactly the stale-copy failure mode
@@ -289,11 +292,11 @@ operator steps).
 | 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☑ 2026-07-13 (metro-worksheet.json validates against schema/metro-worksheet.schema.json from the engine-v1.0.2 release assets; all 24 layers, City Hall anchors, mid-East-River negative point) |
 | 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☑ 2026-07-13 (seven GENERATED regions across six files; CLAUDE.md replaced wholesale — the stale copy still opened "Chicago District Explorer" — and the sw.js nypd-placeholder claim is gone, both visible in the #27 diff) |
 | 2.3–2.4 | `--check` in CI + drift drill | failing run URL recorded | ☑ 2026-07-13 (--check step first in smoke-test.yml; drill below) |
-| 3.1 | CAPABILITIES declared | first reverse-parity WARN fires CHI-side | ☐ |
-| 3.2 | METRO_EXPLORERS generated | hand-edit now fails `--check` | ☐ |
-| 3.3 | Coverage one-liners in five builders | visible in weekly roster runs | ☐ |
-| 3.4 | PR-template DoD line | present | ☐ |
-| — | Archive this file | moved to docs/archive/ | ☐ |
+| 3.1 | CAPABILITIES declared | first reverse-parity WARN fires CHI-side | ☑ 2026-07-13 (#28 declared the CHI-mastered shape + negative-point-ground-truth, born here; the WARN fired CHI-side — run 29217295970, issue CHI#98 — and cleared after the engine-v1.0.3 back-port, run 29217657897) |
+| 3.2 | METRO_EXPLORERS generated | hand-edit now fails `--check` | ☑ 2026-07-13 (emitted from the worksheet, synced from chidistricts.com/metros.json via `--sync-fleet` — arrived with the v1.0.3 bump #29; live sync verified a byte no-op; hand-edits fail `--check` per the 2.4 drill) |
+| 3.3 | Coverage one-liners in five builders | visible in weekly roster runs | ☑ 2026-07-13 (#28; fleet-status greps them from run logs — CHI#98 already shows the convention working on CHI's CPD line; NYC lines appear as the weekly runs cycle) |
+| 3.4 | PR-template DoD line | present | ☑ 2026-07-13 (#28) |
+| — | Archive this file | moved to docs/archive/ | ☑ 2026-07-13 (this PR — the checklist is fully green) |
 
 ## Drill evidence (fill in — metro-#3 gate inputs)
 
