@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nyc.chidistricts.com/sitemap.xml
