@@ -40,7 +40,7 @@ const BASE = process.env.BASE_URL || "http://localhost:8000/";
 // ==== GENERATED:BEGIN smoke-config ====
 const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
 const OFFLINE = ["borough", "judicial-district", "municipal-court"];
-const EXPECT_DISTRICT = { "borough": "Brooklyn", "judicial-district": "1", "municipal-court": "1" };
+const EXPECT_DISTRICT = { "borough": "Manhattan", "judicial-district": "1", "municipal-court": "1" };
 const NEGATIVE_POINT = "40.72230,-73.96970"; // mid-East-River — legitimately no borough
 const EXPECT_LAYERS = 24; // Threads 1–4: full roster (+ council, community-district, congress, state senate/assembly, election-district, borough-president, district-attorney)
 // ==== GENERATED:END smoke-config ====
