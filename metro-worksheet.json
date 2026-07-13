@@ -103,9 +103,9 @@
       { "file": "ny-senate-members.json", "min_keys": 60 },
       { "file": "ny-assembly-members.json", "min_keys": 145 },
       { "file": "cec-members.json", "min_keys": 0,
-        "note": "placeholder — Playwright scrape pending (§9)" },
-      { "file": "borough-officials.json", "min_keys": 0,
-        "note": "placeholder — operator input pending (§11.3)" }
+        "note": "honest placeholder (floor 0): CEC members are decentralized across 32 independent council sites with no scrapable central source or Open Data dataset; card links to the DOE hub (see scripts/cec_scraper.py)" },
+      { "file": "borough-officials.json", "min_keys": 5,
+        "note": "10 offices (5 BP + 5 DA), operator-maintained from official sites; floor 5 = one entry per borough (build_borough_officials.py keys by borough)" }
     ]
   },
   "sw": {

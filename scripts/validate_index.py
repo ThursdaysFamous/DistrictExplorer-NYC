@@ -103,8 +103,8 @@ ROSTER_FILES = {
     "council-members.json": 48,
     "ny-senate-members.json": 60,
     "ny-assembly-members.json": 145,
-    "cec-members.json": 0,  # placeholder — Playwright scrape pending (§9)
-    "borough-officials.json": 0,  # placeholder — operator input pending (§11.3)
+    "cec-members.json": 0,  # honest placeholder (floor 0): CEC members are decentralized across 32 independent council sites with no scrapable central source or Open Data dataset; card links to the DOE hub (see scripts/cec_scraper.py)
+    "borough-officials.json": 5,  # 10 offices (5 BP + 5 DA), operator-maintained from official sites; floor 5 = one entry per borough (build_borough_officials.py keys by borough)
 }
 # ==== GENERATED:END validator-config ====
 
