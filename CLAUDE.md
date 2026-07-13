@@ -4,9 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Chicago District Explorer: a single-file, dependency-light web app. Click a point in Chicago (or search an address) and it reports every civic district containing that point and who represents you there — wards, county/state/federal legislative districts, police districts/beats, school zones, and more. Deployed as a static site to `chidistricts.com` (see `CNAME`).
+NYC District Explorer: a single-file, dependency-light web app. Click a point in New York City (or search an address) and it reports every civic district containing that point and who represents you there — boroughs, council/community/legislative districts, NYPD precincts/sectors, school zones, and more. Deployed as a static site to `nyc.chidistricts.com` (see `CNAME`). This is a metro fork of the Chicago reference implementation (`ThursdaysFamous/DistrictExplorer-CHI`); the build record for the port is archived at CHI `docs/archive/METRO_EXPANSION_NYC.md`, and the conformance work order lives at `docs/NYC_CONFORMANCE.md`.
 
-**There is no build step, no framework, and no server-side code.** The entire app — styles, core, and all layer modules — lives inline in `index.html` (~3,500 lines). `sw.js` is the service worker; `data/app/*.json` are runtime-fetched data files. Everything else is data pipeline, scrapers, or CI.
+**There is no build step, no framework, and no server-side code.** The entire app — styles, core, and all layer modules — lives inline in `index.html`. `sw.js` is the service worker; `data/app/*.json` are runtime-fetched data files. Everything else is data pipeline, scrapers, or CI.
+
+<!-- ==== GENERATED:BEGIN metro-facts ==== -->
+**Metro facts** (generated from `metro-worksheet.json` — edit the worksheet and run
+`python3 scripts/generate_metro_files.py`; hand-edits here fail CI):
+
+- Metro: New York City (`nyc`) — https://nyc.chidistricts.com/
+- Geocoders: address GeoSearch (NYC-bounded type-ahead, geosearch.planninglabs.nyc); unbounded Photon (whole-coverage, sibling-metro lookup); POI GeoSearch (office-address pin lookup)
+- Ground truth: 40.71274,-74.00602 (New York City Hall (Manhattan)) → borough Manhattan; judicial-district 1; municipal-court 1. Negative point 40.72230,-73.96970 (mid-East-River — legitimately no borough).
+- Layers: 24 registered (political 10, safety 5, schools 6, geography 3); `registerLayer(` floor 5. Debug namespace `window.NycExplorer`.
+- Scheduled workflows: `update-ny-legislature-roster.yml` (Mon 13:00 UTC); `update-congress-roster.yml` (Mon 13:30 UTC); `update-nypd-roster.yml` (Tue 13:00 UTC); `update-cec-roster.yml` (Wed 13:00 UTC); `update-council-roster.yml` (Thu 13:00 UTC); `validate-sources.yml` (1st of month 12:00 UTC).
+- Source registry: `scripts/validate_sources.py` (machine-checked monthly)
+<!-- ==== GENERATED:END metro-facts ==== -->
 
 ## Running & testing
 
@@ -20,58 +32,52 @@ BASE_URL=http://localhost:8000/ node scripts/smoke_test.mjs   # serve first, the
 
 # Static gate (run after any data/app regeneration or app edit):
 python3 scripts/validate_index.py index.html
+
+# Generated-region gate (Conversion 2): per-fork facts live ONCE in
+# metro-worksheet.json; GENERATED:BEGIN/END regions in index.html, sw.js,
+# validate_index.py, smoke_test.mjs, CLAUDE.md, and README.md are emitted from
+# it. NEVER hand-edit a GENERATED region — edit the worksheet and regenerate:
+pip install -c scripts/requirements.txt jsonschema
+python3 scripts/generate_metro_files.py            # regenerate in place
+python3 scripts/generate_metro_files.py --check    # the CI drift gate
+
+# Source-freshness gate (checks upstream datasets haven't gone stale):
+pip install -c scripts/requirements.txt requests
+python3 scripts/validate_sources.py            # add --offline to skip network
 ```
 
-`smoke_test.mjs` is a single end-to-end script, not a framework — there are no "individual tests" to select. It asserts the app boots, registers all layers, classifies a known downtown point against ground truth (school board 12, IL Supreme Court 1, Board of Review 3), and degrades to an isolated error card when a source fails. `node_modules`/`package.json` are intentionally gitignored — this repo never commits build artifacts.
+`smoke_test.mjs` is a single end-to-end script, not a framework. It asserts the app boots, registers all layers, classifies City Hall against the three no-API anchors (borough → Manhattan, judicial district 1, municipal court 1), verifies a mid-East-River click honestly resolves to **no** borough (never snap-to-nearest), and degrades to an isolated error card when a source fails. `node_modules`/`package.json` are intentionally gitignored — this repo never commits build artifacts.
 
-**Sandboxed environments (Claude Code web) — Leaflet CDN egress:** `index.html` loads Leaflet from `cdnjs.cloudflare.com`. In the Claude Code web/sandbox the headless browser cannot reach that CDN — Chromium doesn't use the agent HTTPS proxy, so the request resets (`ERR_CONNECTION_RESET` → `L is not defined` → the app never boots). This is environmental, **not** a code regression; don't chase it in app code. It's handled automatically: a `SessionStart` hook (`.claude/settings.json`) runs `scripts/vendor_leaflet.sh`, which `curl`s Leaflet (curl *does* go through the proxy) into `scripts/vendor/leaflet/` (gitignored). `smoke_test.mjs` then serves those files same-origin via `page.route`, so the app boots. Production and GitHub Actions CI are untouched — they reach the CDN directly and the vendor dir is absent, so the fallback is skipped. To run the smoke test manually in this env, `bash scripts/vendor_leaflet.sh` first (or just rely on the session-start hook).
+**Sandboxed environments (Claude Code web) — Leaflet CDN egress:** `index.html` loads Leaflet from `cdnjs.cloudflare.com`, which the sandboxed browser can't reach. Handled automatically: `scripts/vendor_leaflet.sh` curls Leaflet into `scripts/vendor/leaflet/` (gitignored) and `smoke_test.mjs` serves it same-origin via `page.route`. Production and CI are untouched. Run the vendor script manually before a local smoke run in such an environment.
 
-`validate_index.py` is the merge gate: it confirms `index.html` passes `node --check`, still registers every layer (a drop in the `registerLayer(` count fails), embeds no dataset inline, and that every `data/app/` file is present with the expected feature/roster counts.
+`validate_index.py` is the merge gate; `validate_sources.py` is the monthly freshness gate (ported from CHI in Phase 0.2 — its manifest is the machine-checked registry of every Socrata id, ArcGIS/TIGERweb endpoint, and anchor provenance this fork depends on).
 
 ## Architecture: stable core + pluggable layer modules
 
-All inside `index.html`, wrapped in one IIFE. The full contract and per-thread build log live in `docs/BUILD_PLAYBOOK_1.md`; `docs/OPTIMIZATION_PLAYBOOK.md` holds measured optimization tasks.
+The metro-agnostic engine inside `index.html` is fenced with `/* ==== ENGINE:BEGIN <name> ==== */ … ENGINE:END` markers and is **distributed as a published, hash-verified release artifact from CHI** (CHI `docs/MECHANIZATION_PLAYBOOK.md`, Conversion 1): `engine.lock.json` pins the version + sha256, deploy-time assembly splices and asserts the pinned bytes (`scripts/apply_engine.py`, `check_engine_parity.py --against-bundle`), and new engine releases arrive as gated `engine-bump.yml` PRs that also refresh the shared scripts. Never hand-edit inside an ENGINE fence; never inline a city-specific value in one — city values live in the `METRO:BEGIN config` block (worksheet-generated). See `docs/ENGINE_SYNC.md`.
 
-**Core** provides: the Leaflet map, click-to-select + debounced Chicago-bounded Nominatim geocoder, a global `state` object `{selectedPoint, sequence, layersOn, ...}`, the layer registry + result-card framework, selected-boundary highlight, and URL-hash permalinks (`#point=lat,lng&layers=ward,school-board`). A small namespace is exposed as `window.ChiExplorer` for debugging.
+Shared utilities (reuse these; don't reinvent): `sanitize()`/`textContent` for every external string, `pointInGeometry()`, `fetchJSONWithRetry()`, `haversineMiles()`. Layer modules register via `registerLayer({ id, group, label, overlay, query, render })`; families go through the factories (`registerPolygonLayer`, `registerSchoolZone`, `registerCpsNetwork`, `registerIlgaChamber` — shared engine names kept fork-agnostic) with NYC-side wrappers carrying city dataset schemas (`registerNycZone`, `registerBoroughOfficeLayer`). The two invariants that pervade the code: the stale-async `sequence` guard, and per-layer failure isolation (one layer's dead source never breaks another's card).
 
-**Shared utilities** (reuse these; don't reinvent):
-- `sanitize(str)` / render via `textContent` — all external strings must go through one of these. Injecting scraped or API text as HTML is treated as a real security bug here.
-- `pointInGeometry(pt, geometry)` — the point-in-polygon test every polygon layer's `query` uses.
-- `fetchJSONWithRetry(url, opts, retries)` — the standard data-fetch path (retry + failure isolation).
-- `haversineMiles(...)` — for the nearest-N station layers (police/fire), which use straight-line proximity instead of point-in-polygon.
+**Honesty rules (non-negotiable):** officeholder data is never guessed — where no verifiable roster exists the card links to the official body (`cec-members.json` and `borough-officials.json` ship as placeholders for exactly this reason; NYPD resolves ~74/78 commanding officers with honest nulls). External strings are always sanitized or set via `textContent`. Water clicks resolve honestly to "no district" — much of the in-bounds map is river/bay (METRO_BBOX runs SW Tottenville → NE north Bronx, out to the Rockaways) and the app never snaps to the nearest shore.
 
-**A layer module** is registered via `registerLayer({ id, group, label, overlay: {load, style}, query(point, seq), render(result) })`. `group` is one of `political | safety | schools | geography`. Overlays lazy-load their boundaries on first toggle and are cached; `query` runs locally against the cached geometry. Families of similar layers are built by factory helpers (`registerSchoolZone`, `registerCpsNetwork`, `registerIlgaChamber`) — follow the existing factory when adding a sibling. Optional contract field `pointOfInterest(result) => {label, address} | null` drops a geocoded map pin (used by the school-zone layers).
+## NYC-specific notes worth keeping
 
-**Two invariants that pervade the code:**
-
-1. **Stale-async guard via `sequence`.** Every point selection bumps `state.sequence`. Async work captures `seq` and bails (`if (seq !== state.sequence) return;`) when a newer point has been selected. Preserve this in any code that awaits between selection and render.
-
-2. **Per-layer failure isolation.** Each result card is independent: a layer whose data source is down shows an error + Retry *inside its own card* and never affects the others. Never let one layer's failure throw out of its `query`/`render` into shared code.
-
-**Honesty rules (non-negotiable, enforced in review):** officeholder data is never guessed. Where no verifiable roster source exists, cards link to the official body instead of inventing a name. External strings are always sanitized or set via `textContent`.
-
-## Cross-metro engine parity
-
-This app is the NYC fork in a family of sibling metro forks; **Chicago (`ThursdaysFamous/DistrictExplorer-CHI` / chidistricts.com) is the reference implementation**. The metro-agnostic engine inside `index.html` is fenced with `/* ==== ENGINE:BEGIN <name> ==== */ … ENGINE:END` markers and must stay **byte-identical across forks**; everything city-specific those blocks reference lives in the `METRO:BEGIN config` block near the top of the script. When editing:
-
-- Don't edit inside an ENGINE fence unless the change is a verbatim port of a Chicago-repo engine diff (or will be landed there first) — port the **actual git diff**, never re-implement from a prose prompt (same prompt ≠ same code; that's exactly how the forks drifted before the fences existed).
-- Never inline a city-specific value in an ENGINE block — add a variable to the METRO config block instead.
-- Verify with `python3 scripts/check_engine_parity.py index.html` (fence lint; `validate_index.py` also runs it) or `--against https://chidistricts.com/ --strict` (byte comparison). The scheduled cross-fork watcher runs in the Chicago repo; this repo's `engine-parity.yml` is `workflow_dispatch`-only.
-- Full protocol + the known reconciliation backlog: `docs/ENGINE_SYNC.md`.
+- **Socrata**: anonymous `.json` requests 403 on NYC's portal, so the METRO block carries a Socrata app token — a public throttling identifier, not a secret (never put an API Key *secret* there).
+- **Hover keys** exclude the encoded fields `boro_cd` and `electdist` on purpose: they need decoding before display and would misread raw. Re-seed hover keys from observed NYC field names via the worksheet.
+- **Geocoders**: `geocodeAddress()`/`poiGeocodeRequest()` use GeoSearch (`geosearch.planninglabs.nyc`), `geocodeUnbounded()` uses Photon — provider code is fork code by design (see the GEOCODER section in `index.html`).
+- `docs/BUILD_PLAYBOOK_1.md`, `docs/OPTIMIZATION_PLAYBOOK.md`, and `docs/REDISTRICTING_RUNBOOK.md` are **pointer stubs** — the masters live in the CHI repo. Never grow a copy here.
 
 ## Data pipeline
 
-Most layers fetch live public APIs at runtime (Chicago Data Portal / Socrata, CPD ArcGIS, Cook County GIS, Census TIGERweb, Nominatim). Layers with **no public API** ship their data as same-origin files under `data/app/`, fetched on first toggle:
-
-- **Boundary geometry** (`school-board-districts.json`, `il-supreme-court-districts.json`, `ccbr-districts.json`) — mapshaper-simplified from the full-precision GeoJSON in `data/` (originals in `data/source/raw/`). Regenerate with `scripts/build_embedded_boundaries.py` (rare operator step). Service worker serves these **cache-first** (boundaries change ~once a decade).
-- **Officeholder rosters** (`il-{senate,house}-members.json`, `congress-roster.json`, `cpd-district-info.json`, `ccpsa-district-councils.json`, `school-board-members.json`) — regenerated **weekly by CI** from scraper output. Service worker serves these **network-first** so a returning visitor never gets a stale officeholder.
-
-**Scraper → builder pattern** (each roster has a pair): a `*_scraper.py` produces intermediate JSON, a `build_*.py` writes the `data/app/*.json` file with count guards (it refuses to write if too few records resolve). `scripts/requirements.txt` pins deps; the CPD scraper additionally needs Playwright for a Cloudflare managed-challenge fetch. When editing a scraper, keep its `js_string()`-style `</script>` + U+2028/U+2029 escaping — that guard closed a real injection bug.
+Most layers fetch live public APIs at runtime (NYC Open Data / Socrata, ArcGIS, TIGERweb, GeoSearch). Layers with no public API ship same-origin files under `data/app/`: boundary geometry for the three anchors (built by `scripts/build_embedded_boundaries.py`, which registers all three anchor provenances) served cache-first, and officeholder rosters (scraper → builder pairs with count guards: `ny_legislature_scraper`/`build_ny_roster`, `council_scraper`/`build_council_roster`, `nypd_precinct_scraper`/`build_nypd_roster`, `cec_scraper`/`build_cec_roster`, `build_congress_roster`, `build_borough_officials`) served network-first so a returning visitor never gets a stale officeholder.
 
 ## CI workflows (`.github/workflows/`)
 
-- `smoke-test.yml` — runs the behaviour gate on every PR and push to `main`.
-- `update-{ilga,congress,cpd,ccpsa}-roster.yml` — weekly (staggered) roster refreshes. Each re-scrapes, rebuilds `data/app/`, runs `validate_index.py`, and — if anything changed — **opens a PR rather than committing to `main`.** Officeholder data always gets a human review before it ships. Match this pattern for any new roster: never auto-commit roster changes to `main`.
+- `smoke-test.yml` — the `--check` generated-region gate, then the behaviour gate, on every PR and push to `main`.
+- `deploy-pages.yml` — hash-verified engine assembly (fetch pinned release → `sha256sum --check` → splice → gates) before the Pages artifact; `assemble` runs on any ref, `deploy` is main-only.
+- `engine-bump.yml` — consumes CHI's `engine-release` dispatch: re-pins the lockfile, refreshes shared scripts from the release assets, applies, gates, and opens a PR on `bot/engine-bump`.
+- `update-{ny-legislature,congress,nypd,cec,council}-roster.yml` — weekly staggered roster refreshes; each opens a PR, never commits to `main`. Officeholder data always gets a human review before it ships.
+- `validate-sources.yml` — monthly freshness + redistricting watch; opens/updates one tracking issue, never edits anything.
 
 ## Conventions
 

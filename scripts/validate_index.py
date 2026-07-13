@@ -43,49 +43,48 @@ import subprocess
 import sys
 import tempfile
 
-# Engine floor (NYC, re-derived per thread; full §8 re-derivation lands Thread 6):
-# `registerLayer(` = 1 function definition + 4 factory bodies (registerPolygonLayer
-# / registerSchoolZone / registerCpsNetwork / registerIlgaChamber). NYC's Thread-1
-# modules all go through registerPolygonLayer, so they raise the module count
-# checked via EXPECT_LAYER_IDS below, not this literal count.
+# The constants below are GENERATED from metro-worksheet.json (Conversion 2 —
+# edit the worksheet, run scripts/generate_metro_files.py). Fork history worth
+# keeping by hand: NYC's registerLayer floor arithmetic is 1 function
+# definition + 4 factory bodies (registerPolygonLayer / registerSchoolZone /
+# registerCpsNetwork / registerIlgaChamber) — NYC modules all register through
+# factories, so module loss is guarded by EXPECT_LAYER_IDS, not this count.
+# ==== GENERATED:BEGIN validator-config ====
+# Floor, not a moving target: new layers only raise this; a drop means
+# modules were lost.
 MIN_REGISTER_LAYER = 5
 
-# Every layer id that must be registered in index.html (guards module loss more
-# directly than the registerLayer( count now that modules use the factories).
-# Grows thread by thread toward the 24-layer §7 roster.
+# Every layer id that must be registered in index.html. Most modules register
+# through the factories, so deleting one would NOT lower the raw registerLayer(
+# count above — this per-id list is the direct module-loss guard. Emitted in
+# LAYER_AREA_RANK order; check 5 keeps the two naming the same set.
 EXPECT_LAYER_IDS = [
-    "neighborhood", "zip-code", "borough", "judicial-district", "municipal-court",
-    "police-precinct", "police-sector", "police-station", "fire-station", "fire-battalion",
-    "es-zone", "ms-zone", "hs-zone", "school-district", "cec", "school-site",
-    "council", "community-district", "congress", "state-senate", "state-assembly",
-    "election-district", "borough-president", "district-attorney",
+    "borough", "judicial-district", "borough-president", "district-attorney",
+    "congress", "municipal-court", "state-senate", "school-district", "cec",
+    "fire-battalion", "council", "community-district", "election-district",
+    "state-assembly", "police-sector", "police-precinct", "zip-code",
+    "neighborhood", "hs-zone", "ms-zone", "es-zone", "school-site",
+    "police-station", "fire-station",
 ]
 
-# file -> (min features, max features) for the offline-anchor boundary layers
-# fetched by the app (METRO_EXPANSION_PLAYBOOK §8).
+# file -> (min features, max features) for the boundary layers fetched by the app.
 GEOMETRY_FILES = {
     "borough-boundaries.json": (5, 5),
     "judicial-districts.json": (5, 5),
     "municipal-court-districts.json": (28, 28),
 }
 
-# file -> minimum key count (officeholder rosters). nypd-precinct-info ships as
-# an empty placeholder until its Thread 5 scrape, so it only has to be a JSON
-# object (min 0). The floor is raised once the scrape lands.
+# file -> minimum key count (officeholder rosters).
 ROSTER_FILES = {
-    # Thread 5 filled these from live sources; floors guard against a partial
-    # scrape shipping. nypd-precinct-info keys every precinct (even a null CO), so
-    # its floor is the precinct count, not the commander count.
-    "nypd-precinct-info.json": 70,
+    "nypd-precinct-info.json": 70,  # keys every precinct (even a null CO), so the floor is the precinct count, not the commander count
     "congress-roster.json": 26,
     "council-members.json": 48,
     "ny-senate-members.json": 60,
     "ny-assembly-members.json": 145,
-    # CEC + borough-officials remain placeholders (Playwright scrape / operator
-    # input, §9/§11.3), so they only have to be a JSON object.
-    "cec-members.json": 0,
-    "borough-officials.json": 0,
+    "cec-members.json": 0,  # placeholder — Playwright scrape pending (§9)
+    "borough-officials.json": 0,  # placeholder — operator input pending (§11.3)
 }
+# ==== GENERATED:END validator-config ====
 
 
 def fail(msg):
