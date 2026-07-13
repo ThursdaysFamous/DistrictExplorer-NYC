@@ -26,6 +26,7 @@
 // NYC fork (METRO_EXPANSION_PLAYBOOK §4). Thread 1 added the three static
 // geometry anchors (borough / judicial-district / municipal-court) to
 // GEOMETRY_URLS below; the Thread 5 pipeline filled ROSTER_URLS.
+/* ==== GENERATED:BEGIN sw-metro-config ==== */
 const CACHE_NAME = "nyc-district-explorer-shell-v6";
 
 const SHELL_URLS = [
@@ -37,10 +38,10 @@ const SHELL_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
 ];
 
-// Boundary geometry for offline-anchor layers lives in data/app/*.json, fetched
-// lazily on first toggle. Boundaries change ~once a decade, so serve them
-// cache-first (instant, works offline) and refresh in the background. These are
-// the deterministic anchors the smoke test classifies against (§8).
+// Boundary geometry (data/app/*.json, fetched lazily on first toggle).
+// Boundaries change ~once a decade, so serve them cache-first (instant, and
+// works offline) and refresh in the background. Precached at install so
+// those layers work offline.
 const GEOMETRY_URLS = [
   "./data/app/borough-boundaries.json",
   "./data/app/judicial-districts.json",
@@ -48,18 +49,18 @@ const GEOMETRY_URLS = [
 ];
 
 // Roster/officeholder data (also in data/app/) is refreshed by the weekly CI
-// and must never be served stale — network-first, with the cached copy only as
-// an offline fallback. `nypd-precinct-info.json` ships as an empty placeholder
-// until the Thread 5 scrape lands; more roster files join as later threads land.
+// and must never be served stale — network-first, with the cached copy only
+// as an offline fallback. Same freshness rule as the shell.
 const ROSTER_URLS = [
   "./data/app/nypd-precinct-info.json",
-  "./data/app/cec-members.json",
   "./data/app/congress-roster.json",
   "./data/app/council-members.json",
   "./data/app/ny-senate-members.json",
   "./data/app/ny-assembly-members.json",
+  "./data/app/cec-members.json",
   "./data/app/borough-officials.json",
 ];
+/* ==== GENERATED:END sw-metro-config ==== */
 /* ==== METRO:END sw-config ==== */
 
 /* ==== ENGINE:BEGIN sw-handlers ==== */

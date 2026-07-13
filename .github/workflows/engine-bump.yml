@@ -6,8 +6,9 @@ name: Engine bump
 #
 # On each release: update engine.lock.json from the payload, refresh the
 # shared scripts from the release assets (the release tarball IS the
-# distribution channel for shared scripts — apply_engine.py and
-# check_engine_parity.py arrive with every bump), splice the pinned engine
+# distribution channel for shared scripts — apply_engine.py,
+# check_engine_parity.py, generate_metro_files.py, and the metro-worksheet
+# schema arrive with every bump), splice the pinned engine
 # into index.html/sw.js, re-run the static and behaviour gates, then open a
 # PR on the fixed branch bot/engine-bump — force-push + `gh pr list`
 # duplicate guard, the same pattern as the five roster workflows. A human
@@ -58,9 +59,11 @@ jobs:
             --repo ThursdaysFamous/DistrictExplorer-CHI \
             --pattern 'engine.bundle.js' --pattern 'engine.manifest.json' \
             --pattern 'apply_engine.py' --pattern 'check_engine_parity.py' \
+            --pattern 'generate_metro_files.py' --pattern 'metro-worksheet.schema.json' \
             --clobber
           echo "$(jq -r .sha256 engine.lock.json)  engine.bundle.js" | sha256sum --check -
-          mv -f apply_engine.py check_engine_parity.py scripts/
+          mv -f apply_engine.py check_engine_parity.py generate_metro_files.py scripts/
+          mv -f metro-worksheet.schema.json schema/
 
       - name: Apply engine + static merge gate
         run: |
@@ -96,7 +99,7 @@ jobs:
 
       - name: Check for changes
         id: diff
-        run: git diff --quiet -- engine.lock.json scripts/apply_engine.py scripts/check_engine_parity.py index.html sw.js && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+        run: git diff --quiet -- engine.lock.json scripts/apply_engine.py scripts/check_engine_parity.py scripts/generate_metro_files.py schema/metro-worksheet.schema.json index.html sw.js && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Open or update pull request
         if: steps.diff.outputs.changed == 'true'
@@ -108,7 +111,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add engine.lock.json scripts/apply_engine.py scripts/check_engine_parity.py index.html sw.js
+          git add engine.lock.json scripts/apply_engine.py scripts/check_engine_parity.py scripts/generate_metro_files.py schema/metro-worksheet.schema.json index.html sw.js
           git commit -m "Bump engine to $ENGINE_VERSION"
           git push -u origin "$branch" --force
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then

@@ -37,11 +37,14 @@ const VENDORED_LEAFLET =
 if (VENDORED_LEAFLET) console.log("  (serving Leaflet from scripts/vendor/leaflet — CDN unreachable in this env)");
 
 const BASE = process.env.BASE_URL || "http://localhost:8000/";
+// ==== GENERATED:BEGIN smoke-config ====
 const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
-const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn)
-const WATER = "40.7223,-73.9697"; // mid-East-River — legitimately no borough
 const OFFLINE = ["borough", "judicial-district", "municipal-court"];
+const EXPECT_DISTRICT = { "borough": "Manhattan", "judicial-district": "1", "municipal-court": "1" };
+const NEGATIVE_POINT = "40.72230,-73.96970"; // mid-East-River — legitimately no borough
 const EXPECT_LAYERS = 24; // Threads 1–4: full roster (+ council, community-district, congress, state senate/assembly, election-district, borough-president, district-attorney)
+// ==== GENERATED:END smoke-config ====
+const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn) — the re-classify hop stays fork test code
 const BOOT_TIMEOUT = 45000; // Leaflet CDN + first paint on a cold CI runner
 const QUERY_TIMEOUT = 25000;
 
@@ -111,13 +114,13 @@ try {
     const page = await booted(context, `${BASE}#point=${POINT}&layers=${OFFLINE.join(",")}`);
 
     const boro = await cardText(page, "borough");
-    check("borough classifies City Hall (Manhattan)", !boro.error && /Manhattan/.test(boro.text) && /New York/.test(boro.text), boro.text.slice(0, 70));
+    check(`borough classifies City Hall (${EXPECT_DISTRICT["borough"]})`, !boro.error && new RegExp(EXPECT_DISTRICT["borough"]).test(boro.text) && /New York/.test(boro.text), boro.text.slice(0, 70));
 
     const jud = await cardText(page, "judicial-district");
-    check("judicial-district classifies City Hall (District 1)", !jud.error && /Judicial District\s*1\b/.test(jud.text), jud.text.slice(0, 70));
+    check(`judicial-district classifies City Hall (District ${EXPECT_DISTRICT["judicial-district"]})`, !jud.error && new RegExp("Judicial District\\s*" + EXPECT_DISTRICT["judicial-district"] + "\\b").test(jud.text), jud.text.slice(0, 70));
 
     const muni = await cardText(page, "municipal-court");
-    check("municipal-court classifies City Hall (Manhattan District 1)", !muni.error && /Manhattan Municipal Court District 1\b/.test(muni.text), muni.text.slice(0, 80));
+    check(`municipal-court classifies City Hall (${EXPECT_DISTRICT["borough"]} District ${EXPECT_DISTRICT["municipal-court"]})`, !muni.error && new RegExp(EXPECT_DISTRICT["borough"] + " Municipal Court District " + EXPECT_DISTRICT["municipal-court"] + "\\b").test(muni.text), muni.text.slice(0, 80));
 
     // Moving the selection re-classifies (P7 incremental-restyle fast path):
     // City Hall -> Brooklyn Borough Hall flips borough Manhattan->Brooklyn and
@@ -150,7 +153,7 @@ try {
   //    borough card must show the honest no-result state — never snap to nearest.
   {
     const context = await browser.newContext({ serviceWorkers: "block" });
-    const page = await booted(context, `${BASE}#point=${WATER}&layers=borough`);
+    const page = await booted(context, `${BASE}#point=${NEGATIVE_POINT}&layers=borough`);
     const boro = await cardText(page, "borough");
     check("mid-river click resolves to no borough (honest empty state)", !boro.error && boro.empty, boro.text.slice(0, 70));
     await context.close();

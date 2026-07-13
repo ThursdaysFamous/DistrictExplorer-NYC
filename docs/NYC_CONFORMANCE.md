@@ -286,9 +286,9 @@ operator steps).
 | 1.1–1.4 | Lockfile, bump workflow, deploy assembly | first assembly = empty `git diff` | ☑ 2026-07-12 (engine-v1.0.0 pinned, sha `47d6d1ff…`; local assembly run: sha256sum OK, 45+2 blocks spliced **0 updated**, `git diff index.html sw.js` empty; note: the 1.4 snippet's `check_engine_parity.py --against-bundle` flag doesn't exist in the shared script yet — must land CHI-first; until then apply_engine.py's splice self-check enforces the same assertion, documented in deploy-pages.yml. **Resolved 2026-07-13:** the flag landed CHI-side (CHI #91), shipped in `engine-v1.0.1`, arrived here via bump PR #23; the explicit `--strict` assertion lines are now in deploy-pages.yml) |
 | 1.5 | Corruption drill | failing run URL recorded | ☑ 2026-07-12 (failed at `sha256sum --check` — see evidence table; first attempt exposed that the one-job deploy layout could never run on a branch — github-pages environment branch protection — fixed by splitting assemble/deploy jobs) |
 | 1.6 | engine-parity.yml deleted | one clean assembled deploy first | ☑ 2026-07-13 (clean assembled deploys on main: run 29212551023 after #22 merged, again after bump PR #23; workflow deleted + `--against-bundle --strict` assertion lines added in the close-out PR) |
-| 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☐ |
-| 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☐ |
-| 2.3–2.4 | `--check` in CI + drift drill | failing run URL recorded | ☐ |
+| 2.1 | Worksheet authored + schema-valid | jsonschema pass | ☑ 2026-07-13 (metro-worksheet.json validates against schema/metro-worksheet.schema.json from the engine-v1.0.2 release assets; all 24 layers, City Hall anchors, mid-East-River negative point) |
+| 2.2 | Six targets generated; stale CLAUDE.md gone; sw.js comment fixed | diff shows both | ☑ 2026-07-13 (seven GENERATED regions across six files; CLAUDE.md replaced wholesale — the stale copy still opened "Chicago District Explorer" — and the sw.js nypd-placeholder claim is gone, both visible in the #27 diff) |
+| 2.3–2.4 | `--check` in CI + drift drill | failing run URL recorded | ☑ 2026-07-13 (--check step first in smoke-test.yml; drill below) |
 | 3.1 | CAPABILITIES declared | first reverse-parity WARN fires CHI-side | ☐ |
 | 3.2 | METRO_EXPLORERS generated | hand-edit now fails `--check` | ☐ |
 | 3.3 | Coverage one-liners in five builders | visible in weekly roster runs | ☐ |
@@ -300,7 +300,7 @@ operator steps).
 | Drill | Failing run URL | Date | Cleared by |
 |---|---|---|---|
 | Engine hash corruption (1.5) | https://github.com/ThursdaysFamous/DistrictExplorer-NYC/actions/runs/29209945390 — `assemble` failed at step "Fetch + verify + apply pinned engine": `engine.bundle.js: FAILED / sha256sum: WARNING: 1 computed checksum did NOT match / exit 1`; deploy job skipped (main-only). Invalid first attempt for the record: run 29209843703 died at github-pages environment branch protection with zero steps run, which forced the assemble/deploy job split. | 2026-07-12 | lockfile restored |
-| Generated-region drift (2.4) | | | regeneration |
+| Generated-region drift (2.4) | https://github.com/ThursdaysFamous/DistrictExplorer-NYC/actions/runs/29216548888 — commit 2e9edc2 hand-flipped the ground-truth borough to "Brooklyn" inside smoke_test.mjs's GENERATED region; the `Generated regions match the worksheet` step failed with the unified diff, all downstream steps skipped | 2026-07-13 | regeneration (revert commit) |
 | validate_sources manifest typo (0.2) | local pre-CI run (no run URL): `872g-cjhh`→`872g-cjhX` in the manifest, `python3 scripts/validate_sources.py --offline` exited **1** with `FAIL — City Council District (51) — dataset id 872g-cjhX not found in index.html — manifest is out of sync with the app (update scripts/validate_sources.py)`; exit 0 after revert | 2026-07-12 | typo reverted |
 
 **0.3 evidence (2026-07-12).** The direct check could not run from the sandbox: the

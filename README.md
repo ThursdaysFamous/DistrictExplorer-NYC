@@ -1,6 +1,8 @@
-# NYC District Explorer
+<!-- ==== GENERATED:BEGIN metro-header ==== -->
+# New York City District Explorer
 
 **Click any point in New York City — or search an address — and see every civic district that contains it, and who represents you there.**
+<!-- ==== GENERATED:END metro-header ==== -->
 
 A single-file, dependency-light web app: one `index.html`, Leaflet for the map, no build step, no framework, no server-side code. Deployed as a static site — any static host or server works.
 
