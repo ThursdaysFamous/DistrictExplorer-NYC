@@ -14,7 +14,7 @@ NYC District Explorer: a single-file, dependency-light web app. Click a point in
 
 - Metro: New York City (`nyc`) — https://nyc.chidistricts.com/
 - Geocoders: address GeoSearch (NYC-bounded type-ahead, geosearch.planninglabs.nyc); unbounded Photon (whole-coverage, sibling-metro lookup); POI GeoSearch (office-address pin lookup)
-- Ground truth: 40.71274,-74.00602 (New York City Hall (Manhattan)) → borough Manhattan; judicial-district 1; municipal-court 1. Negative point 40.72230,-73.96970 (mid-East-River — legitimately no borough).
+- Ground truth: 40.71274,-74.00602 (New York City Hall (Manhattan)) → borough Manhattan; judicial-district 1; municipal-court 1. Negative point 40.72000,-74.04000 (Hudson River, New Jersey waters — outside every anchor geometry (the East River is inside the county-derived judicial districts, so mid-river points there are only borough-negative)).
 - Layers: 24 registered (political 10, safety 5, schools 6, geography 3); `registerLayer(` floor 5. Debug namespace `window.NycExplorer`.
 - Scheduled workflows: `update-ny-legislature-roster.yml` (Mon 13:00 UTC); `update-congress-roster.yml` (Mon 13:30 UTC); `update-nypd-roster.yml` (Tue 13:00 UTC); `update-cec-roster.yml` (Wed 13:00 UTC); `update-council-roster.yml` (Thu 13:00 UTC); `validate-sources.yml` (1st of month 12:00 UTC).
 - Source registry: `scripts/validate_sources.py` (machine-checked monthly)

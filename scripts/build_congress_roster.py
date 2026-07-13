@@ -27,6 +27,22 @@ STATE = "NY"
 MIN_REPS = 24  # NY has 26 U.S. House seats; tolerate a couple of vacancies
 
 
+def _coverage_line(roster):
+    """Per-field coverage one-liner (CHI fleet-status convention): makes
+    parser drift visible at a glance in the weekly run logs. Honest nulls
+    stay honest — this reports them, it never fills them."""
+    rows = []
+    for v in roster.values():
+        if isinstance(v, dict):
+            rows.append(v)
+        elif isinstance(v, list):
+            rows.extend(x for x in v if isinstance(x, dict))
+    if not rows:
+        return None
+    fields = sorted({k for r in rows for k in r})
+    return "  ".join("%s=%d/%d" % (f, sum(1 for r in rows if r.get(f)), len(rows)) for f in fields)
+
+
 def district_offices_by_bioguide():
     """bioguide -> [address-line, "City, NY zip"] for the member's first NY office."""
     try:
@@ -86,6 +102,9 @@ def main():
     with open(OUT, "w") as f:
         json.dump(roster, f, indent=0, ensure_ascii=False)
     print("wrote data/app/congress-roster.json: %d NY U.S. House reps" % len(roster), file=sys.stderr)
+    cov = _coverage_line(roster)
+    if cov:
+        print("field coverage: %s" % cov, file=sys.stderr)
 
 
 if __name__ == "__main__":
