@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NYC District Explorer — find your districts &amp; representatives</title>
 <meta name="description" content="Click any point in New York City, or search an address, to see every civic district that contains it and who represents it." />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://nyc.chidistricts.com/#faq",
+  "mainEntity": [
+    { "@type": "Question", "name": "How do I find out what City Council district I'm in?", "acceptedAnswer": { "@type": "Answer", "text": "Search your address or click your location on the map above. The tool shows your New York City Council district and who represents it, along with every other civic district that covers that exact point." } },
+    { "@type": "Question", "name": "How many City Council districts does New York City have?", "acceptedAnswer": { "@type": "Answer", "text": "New York City has 51 City Council districts, each represented by a Council Member." } },
+    { "@type": "Question", "name": "What NYPD precinct am I in?", "acceptedAnswer": { "@type": "Answer", "text": "New York City is divided into 78 NYPD precincts, each split into smaller sectors. Select any address above to see the precinct that covers it, plus the nearest police station." } },
+    { "@type": "Question", "name": "What is a community district or community board?", "acceptedAnswer": { "@type": "Answer", "text": "New York City has 59 community districts, each served by a community board that advises on land use, the city budget, and local services. The tool shows which community district contains any point you pick." } },
+    { "@type": "Question", "name": "Who represents me in Albany and in Congress?", "acceptedAnswer": { "@type": "Answer", "text": "Pick a location to see your U.S. House district, New York State Senate district, and New York State Assembly district, along with the people currently holding those seats." } },
+    { "@type": "Question", "name": "Is this an official government tool?", "acceptedAnswer": { "@type": "Answer", "text": "No. It draws on public data sources that disclaim legal precision, so always confirm district assignments and officeholders with the relevant government office before relying on them for anything official." } }
+  ]
+}
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#12305C">
 
@@ -961,6 +976,18 @@
     border-right: 7px solid transparent;
     border-top: 12px solid #ffffff;
   }
+  /* NYC-specific: evergreen FAQ below the tool — crawlable answers to the
+     district questions people search for, kept in collapsed <details> so they
+     stay indexable without cluttering the UI. */
+  .faq-section { max-width: 900px; margin: 0 auto; padding: 34px 20px 6px; }
+  .faq-section h2 { font-family: var(--font-display); text-transform: uppercase; font-size: 22px; color: var(--ink); margin: 0 0 14px; }
+  .faq-section details { border-top: 1px solid var(--line); }
+  .faq-section details:last-of-type { border-bottom: 1px solid var(--line); }
+  .faq-section summary { list-style: none; cursor: pointer; padding: 14px 0; font-weight: 600; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+  .faq-section summary::-webkit-details-marker { display: none; }
+  .faq-section summary::after { content: "+"; color: var(--accent-deep); font-size: 22px; font-weight: 400; line-height: 1; }
+  .faq-section details[open] summary::after { content: "\2013"; }
+  .faq-section details p { margin: 0 0 16px; color: var(--slate); font-size: 14px; line-height: 1.55; max-width: 70ch; }
   /* ==== ENGINE:BEGIN styles-hover-responsive ==== */
 
   /* ---- hover explorer: a live popup that follows the cursor and names the
@@ -1123,6 +1150,36 @@
     <div id="groups-root" hidden></div>
   </section>
 </main>
+
+<div class="flag-stripe" aria-hidden="true"></div>
+
+<section class="faq-section" aria-labelledby="faq-heading">
+  <h2 id="faq-heading">Common questions about New York City districts</h2>
+  <details>
+    <summary>How do I find out what City Council district I'm in?</summary>
+    <p>Search your address or click your location on the map above. The tool shows your New York City Council district and who represents it, along with every other civic district that covers that exact point.</p>
+  </details>
+  <details>
+    <summary>How many City Council districts does New York City have?</summary>
+    <p>New York City has 51 City Council districts, each represented by a Council Member.</p>
+  </details>
+  <details>
+    <summary>What NYPD precinct am I in?</summary>
+    <p>New York City is divided into 78 NYPD precincts, each split into smaller sectors. Select any address above to see the precinct that covers it, plus the nearest police station.</p>
+  </details>
+  <details>
+    <summary>What is a community district or community board?</summary>
+    <p>New York City has 59 community districts, each served by a community board that advises on land use, the city budget, and local services. The tool shows which community district contains any point you pick.</p>
+  </details>
+  <details>
+    <summary>Who represents me in Albany and in Congress?</summary>
+    <p>Pick a location to see your U.S. House district, New York State Senate district, and New York State Assembly district, along with the people currently holding those seats.</p>
+  </details>
+  <details>
+    <summary>Is this an official government tool?</summary>
+    <p>No. It draws on public data sources that disclaim legal precision, so always confirm district assignments and officeholders with the relevant government office before relying on them for anything official.</p>
+  </details>
+</section>
 
 <div class="flag-stripe" aria-hidden="true"></div>
 <footer class="site-footer">
