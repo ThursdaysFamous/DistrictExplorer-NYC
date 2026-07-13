@@ -22,6 +22,22 @@ OUT = os.path.join(APP, "council-members.json")
 MIN_MEMBERS = 48  # 51 seats; tolerate a few vacancies
 
 
+def _coverage_line(roster):
+    """Per-field coverage one-liner (CHI fleet-status convention): makes
+    parser drift visible at a glance in the weekly run logs. Honest nulls
+    stay honest — this reports them, it never fills them."""
+    rows = []
+    for v in roster.values():
+        if isinstance(v, dict):
+            rows.append(v)
+        elif isinstance(v, list):
+            rows.extend(x for x in v if isinstance(x, dict))
+    if not rows:
+        return None
+    fields = sorted({k for r in rows for k in r})
+    return "  ".join("%s=%d/%d" % (f, sum(1 for r in rows if r.get(f)), len(rows)) for f in fields)
+
+
 def main():
     argv = sys.argv[1:]
     in_path = argv[argv.index("--in") + 1] if "--in" in argv else DEFAULT_IN
@@ -48,6 +64,9 @@ def main():
     with open(OUT, "w") as f:
         json.dump(roster, f, indent=0, ensure_ascii=False)
     print("wrote data/app/council-members.json: %d members" % len(roster), file=sys.stderr)
+    cov = _coverage_line(roster)
+    if cov:
+        print("field coverage: %s" % cov, file=sys.stderr)
 
 
 if __name__ == "__main__":

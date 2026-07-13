@@ -27,6 +27,22 @@ FLOORS = {"SENATE": 60, "ASSEMBLY": 145}
 OUT = {"SENATE": "ny-senate-members.json", "ASSEMBLY": "ny-assembly-members.json"}
 
 
+def _coverage_line(roster):
+    """Per-field coverage one-liner (CHI fleet-status convention): makes
+    parser drift visible at a glance in the weekly run logs. Honest nulls
+    stay honest — this reports them, it never fills them."""
+    rows = []
+    for v in roster.values():
+        if isinstance(v, dict):
+            rows.append(v)
+        elif isinstance(v, list):
+            rows.extend(x for x in v if isinstance(x, dict))
+    if not rows:
+        return None
+    fields = sorted({k for r in rows for k in r})
+    return "  ".join("%s=%d/%d" % (f, sum(1 for r in rows if r.get(f)), len(rows)) for f in fields)
+
+
 def resolve(records, chamber):
     by_district = {}
     for r in records:
@@ -72,6 +88,9 @@ def main():
         with open(path, "w") as f:
             json.dump(roster, f, indent=0, ensure_ascii=False)
         print("wrote data/app/%s: %d districts" % (fname, len(roster)), file=sys.stderr)
+    cov = _coverage_line(roster)
+    if cov:
+        print("field coverage: %s" % cov, file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -41,7 +41,7 @@ const BASE = process.env.BASE_URL || "http://localhost:8000/";
 const POINT = "40.71274,-74.00602"; // New York City Hall (Manhattan)
 const OFFLINE = ["borough", "judicial-district", "municipal-court"];
 const EXPECT_DISTRICT = { "borough": "Manhattan", "judicial-district": "1", "municipal-court": "1" };
-const NEGATIVE_POINT = "40.72230,-73.96970"; // mid-East-River — legitimately no borough
+const NEGATIVE_POINT = "40.72000,-74.04000"; // Hudson River, New Jersey waters — outside every anchor geometry (the East River is inside the county-derived judicial districts, so mid-river points there are only borough-negative)
 const EXPECT_LAYERS = 24; // Threads 1–4: full roster (+ council, community-district, congress, state senate/assembly, election-district, borough-president, district-attorney)
 // ==== GENERATED:END smoke-config ====
 const POINT2 = "40.69354,-73.98963"; // Brooklyn Borough Hall (Brooklyn) — the re-classify hop stays fork test code
@@ -148,9 +148,11 @@ try {
     await context.close();
   }
 
-  // 3. The NYC water-click honesty rule, made executable: a mid-East-River point
-  //    is inside the map bounds but in no shoreline-clipped borough, so the
-  //    borough card must show the honest no-result state — never snap to nearest.
+  // 3. The NYC water-click honesty rule, made executable: the worksheet's
+  //    negative point (Hudson River, NJ waters) is inside the map bounds but in
+  //    no borough — the card must show the honest no-result state, never snap
+  //    to nearest. (validate_index's negative-point-ground-truth check asserts
+  //    the same point misses EVERY anchor geometry, not just the borough file.)
   {
     const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await booted(context, `${BASE}#point=${NEGATIVE_POINT}&layers=borough`);

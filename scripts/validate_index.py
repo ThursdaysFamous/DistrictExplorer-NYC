@@ -43,6 +43,28 @@ import subprocess
 import sys
 import tempfile
 
+# Machine-readable capability declaration (CHI docs/MECHANIZATION_PLAYBOOK.md,
+# Conversion 3). The fleet-status workflow in the CHI repo parses this list
+# from every fork's validator and diffs it against CHI's: a capability present
+# in a fork but absent in CHI is a reverse-parity WARN — the mechanical form
+# of "fork-born validator improvements must land in CHI within one release
+# cycle". Shape contract (CHI is the master): a module-level list literal
+# named CAPABILITIES of kebab-case strings, one per distinct check this
+# validator actually performs. Add an entry when you add a check; never
+# declare a capability the code doesn't have.
+CAPABILITIES = [
+    "engine-fence-lint",        # 0/0c: ENGINE markers well formed, index.html + sw.js
+    "metro-explorers-lint",     # 0b: portal list shape/bbox sanity
+    "inline-script-parses",     # 1: node --check on the main inline script
+    "register-layer-floor",     # 2: raw registerLayer( count floor
+    "expect-layer-ids",         # 2: every expected layer id registered
+    "layer-area-rank-lint",     # 2b: rank array covers the id set exactly
+    "no-inline-datasets",       # 3: no JSON.parse blobs; data files referenced
+    "data-file-shapes",         # 4: every data/app file exists with sane counts
+    "sw-exactly-one-list",      # 5: each data file cached in exactly one sw list
+    "negative-point-ground-truth",  # 4b: worksheet negative point misses every anchor geometry (born here; CHI back-port pending)
+]
+
 # The constants below are GENERATED from metro-worksheet.json (Conversion 2 —
 # edit the worksheet, run scripts/generate_metro_files.py). Fork history worth
 # keeping by hand: NYC's registerLayer floor arithmetic is 1 function
@@ -305,6 +327,9 @@ def main():
     # (network-first). A boundary served network-first would be a needless fetch;
     # a roster served cache-first could name a stale officeholder — the cardinal
     # sin here. An un-listed file silently loses offline support.
+    # 4b. negative ground-truth point misses every anchor geometry
+    check_negative_point(repo_root, app_dir)
+
     check_sw_lists(repo_root, app_dir)
 
     print(
@@ -313,6 +338,44 @@ def main():
         "METRO_EXPLORERS entries, all data/app files present and cached in "
         "exactly one sw.js list" % (n, len(EXPECT_LAYER_IDS), n_metros)
     )
+
+
+def _point_in_geometry(lng, lat, geom):
+    """Stdlib ray-casting point-in-polygon over a GeoJSON (Multi)Polygon."""
+    def ring_hit(ring):
+        inside = False
+        j = len(ring) - 1
+        for i in range(len(ring)):
+            xi, yi = ring[i][0], ring[i][1]
+            xj, yj = ring[j][0], ring[j][1]
+            if ((yi > lat) != (yj > lat)) and (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi):
+                inside = not inside
+            j = i
+        return inside
+    polys = geom["coordinates"] if geom["type"] == "MultiPolygon" else [geom["coordinates"]]
+    return any(ring_hit(p[0]) and not any(ring_hit(h) for h in p[1:]) for p in polys)
+
+
+def check_negative_point(repo_root, app_dir):
+    """4b. The worksheet's negative ground-truth point must miss EVERY feature
+    of every anchor geometry file — the honest no-district state the smoke
+    test asserts is only meaningful if the committed geometries agree. Catches
+    a re-simplified boundary quietly swallowing the negative point."""
+    ws_path = os.path.join(repo_root, "metro-worksheet.json")
+    if not os.path.exists(ws_path):
+        fail("metro-worksheet.json not found — negative-point ground truth needs it")
+    ws = json.load(open(ws_path))
+    neg = ws["negative_point"]
+    lng, lat = neg["lng"], neg["lat"]
+    for fname in GEOMETRY_FILES:
+        gj = json.load(open(os.path.join(app_dir, fname)))
+        for feat in gj.get("features", []):
+            if _point_in_geometry(lng, lat, feat["geometry"]):
+                fail(
+                    "negative point %.5f,%.5f is INSIDE a feature of data/app/%s (%r) — "
+                    "it must miss every anchor geometry; pick a new negative point in the "
+                    "worksheet or check the geometry build" % (lat, lng, fname, feat.get("properties"))
+                )
 
 
 def _sw_url_list(sw, name):
