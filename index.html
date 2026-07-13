@@ -4,12 +4,74 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NYC District Explorer — find your districts &amp; representatives</title>
-<meta name="description" content="Click any point in New York City, or search an address, to see every civic district that contains it and who represents it." />
+<meta name="description" content="Find your NYC City Council district, community board, NYPD precinct, school district, and state and congressional districts — plus who represents you." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://nyc.chidistricts.com/" />
+
+<!-- Open Graph / social share previews (Facebook, LinkedIn, iMessage, Slack…) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="NYC District Explorer" />
+<meta property="og:title" content="NYC District Explorer — find your districts and representatives" />
+<meta property="og:description" content="Click the map or search any New York City address to see every civic district that covers it — City Council district, community board, NYPD precinct, school district, state and congressional districts — and who represents you." />
+<meta property="og:url" content="https://nyc.chidistricts.com/" />
+<meta property="og:image" content="https://nyc.chidistricts.com/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="NYC District Explorer — a map of New York City with the question: which districts cover this point, and who represents you?" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="NYC District Explorer — find your districts and representatives" />
+<meta name="twitter:description" content="See every civic district that covers a New York City address — City Council district, community board, NYPD precinct, school district, state and congressional districts — and who represents you." />
+<meta name="twitter:image" content="https://nyc.chidistricts.com/og-image.png" />
+
+<!-- Structured data: help search engines understand what this tool is -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://nyc.chidistricts.com/#website",
+      "url": "https://nyc.chidistricts.com/",
+      "name": "NYC District Explorer",
+      "description": "Find every civic district that covers a point or address in New York City, and who represents you there.",
+      "inLanguage": "en-US",
+      "publisher": { "@id": "https://nyc.chidistricts.com/#publisher" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://nyc.chidistricts.com/#publisher",
+      "name": "Overberg",
+      "url": "https://overberg.co"
+    },
+    {
+      "@type": "WebApplication",
+      "name": "NYC District Explorer",
+      "url": "https://nyc.chidistricts.com/",
+      "description": "Click any point in New York City, or search an address, to see every civic district that contains it — City Council district, community board, NYPD precinct and sector, community school district, borough, U.S. House, and New York State Senate and Assembly districts — and who represents you.",
+      "applicationCategory": "Reference",
+      "operatingSystem": "Any (modern web browser)",
+      "browserRequirements": "Requires JavaScript",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "inLanguage": "en-US",
+      "image": "https://nyc.chidistricts.com/og-image.png",
+      "areaServed": { "@type": "City", "name": "New York City", "containedInPlace": { "@type": "State", "name": "New York" } },
+      "keywords": "NYC City Council district map, what council district am I in, NYPD precinct, community board, community school district, New York State Assembly district, New York State Senate district, congressional district, who represents me NYC",
+      "isPartOf": { "@id": "https://nyc.chidistricts.com/#website" },
+      "sameAs": "https://github.com/ThursdaysFamous/DistrictExplorer-NYC"
+    }
+  ]
+}
+</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "@id": "https://nyc.chidistricts.com/#faq",
+  "isPartOf": { "@id": "https://nyc.chidistricts.com/#website" },
   "mainEntity": [
     { "@type": "Question", "name": "How do I find out what City Council district I'm in?", "acceptedAnswer": { "@type": "Answer", "text": "Search your address or click your location on the map above. The tool shows your New York City Council district and who represents it, along with every other civic district that covers that exact point." } },
     { "@type": "Question", "name": "How many City Council districts does New York City have?", "acceptedAnswer": { "@type": "Answer", "text": "New York City has 51 City Council districts, each represented by a Council Member." } },
@@ -941,6 +1003,7 @@
     transition: filter 120ms ease-out;
   }
   .nyc-poi-pin { background: none; border: none; }
+  .empty-state .empty-state-lede { font-size: 12.5px; margin-top: 12px; max-width: 40ch; color: var(--slate-soft); }
 
   /* ---- selection marker as a borough seal: once the selected point resolves
      to one of the five boroughs, the plain teardrop is swapped for that
@@ -1146,6 +1209,7 @@
       </svg>
       <h2>No point selected</h2>
       <p>Search an address or click anywhere on the map to build a civic profile for that location.</p>
+      <p class="empty-state-lede">See your City Council district, community board, NYPD precinct, community school district, borough, U.S. House and New York State districts — plus who represents you.</p>
     </div>
     <div id="groups-root" hidden></div>
   </section>
