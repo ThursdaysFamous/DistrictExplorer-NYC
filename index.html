@@ -4135,7 +4135,7 @@
       fields.push({ label: "What it is", value: "The parent-elected council for this community school district — NYC's elected parent body (not a school board; the city has mayoral control)." });
       var names = (result.members || []).filter(function (m) { return m && m.name; }).map(function (m) { return String(m.name); });
       if (names.length) fields.push({ label: "Members", value: names.join(", ") });
-      fields.push({ label: "Council page", html: '<a href="https://www.schools.nyc.gov/get-involved/families/community-education-council" target="_blank" rel="noopener">Community Education Councils</a>' });
+      fields.push({ label: "Council page", html: '<a href="https://www.schools.nyc.gov/get-involved/families/education-councils/community-education-councils/cec" target="_blank" rel="noopener">Community Education Councils</a>' });
       return renderFieldList(fields);
     }
   });

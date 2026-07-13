@@ -8,7 +8,10 @@ Each council's "Current Members" page lists ~9–11 members. schools.nyc.gov is
 WAF-sensitive, so this uses Playwright (a real browser) per §6c "Playwright from
 day one". The DOE occasionally reorganizes these pages, so the council-page URL
 map (COUNCIL_URLS) is intended to be confirmed/adjusted by the operator on first
-run; until it resolves the full set, build_cec_roster.py keeps the empty
+run. NOTE (2026): the DOE decentralized CEC member listings across 32
+independent council sites (cec3.org, cec14.org, DOE Google Sites, ...) with no
+uniform URL and no NYC Open Data dataset, so the discovery walk below finds
+nothing and build_cec_roster.py keeps the empty
 placeholder (the CEC card degrades to the council page and names no one — never
 guessed). Writes an intermediate JSON with source_url + scraped_at per member.
 
@@ -25,7 +28,7 @@ import time
 DEFAULT_OUT = os.path.join(os.path.dirname(__file__), ".cache", "cec_raw.json")
 # Landing page listing the 32 district councils; the scraper follows each
 # council's "Current Members" link from here. Operator: confirm this resolves.
-INDEX_URL = "https://www.schools.nyc.gov/get-involved/families/community-education-council"
+INDEX_URL = "https://www.schools.nyc.gov/get-involved/families/education-councils/community-education-councils/cec"
 UA = "Mozilla/5.0 (compatible; NYCDistrictExplorer/1.0; +https://nyc.chidistricts.com)"
 
 
