@@ -27,14 +27,13 @@
 // geometry anchors (borough / judicial-district / municipal-court) to
 // GEOMETRY_URLS below; the Thread 5 pipeline filled ROSTER_URLS.
 /* ==== GENERATED:BEGIN sw-metro-config ==== */
-const CACHE_NAME = "nyc-district-explorer-shell-v7";
+const CACHE_NAME = "nyc-district-explorer-shell-v8";
 
 const SHELL_URLS = [
   "./",
   "./manifest.webmanifest",
   "./icons/app/icon-192.png",
   "./icons/app/icon-512.png",
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
 ];
 
