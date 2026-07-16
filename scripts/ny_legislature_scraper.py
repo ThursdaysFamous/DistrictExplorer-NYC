@@ -43,6 +43,14 @@ def _office_lines(office):
     return lines
 
 
+def _is_satellite(office):
+    """True when an office's Open States name marks it as a secondary location.
+    Open States' NY scraper carries nysenate.gov's section heading into the office
+    name, so a "Satellite Office" (e.g. Sen. Addabbo's Middle Village office, listed
+    alongside his primary Woodhaven one) is distinguishable from the main office."""
+    return bool(re.search(r"satellite|annex", office.get("name") or "", re.I))
+
+
 def person_offices(person):
     """{'districtOffice'?: [...], 'capitolOffice'?: [...]} for one Open States
     person — each key present only when that office has an address. The two feed
@@ -50,11 +58,18 @@ def person_offices(person):
     that labels neither is treated as district-only (the local, on-map office) so
     the common case still shows a pin; a person with no addressed office maps to {}.
     """
-    offs = person.get("offices") or []
-    district = next((o for o in offs if o.get("classification") == "district" and o.get("address")), None)
-    capitol = next((o for o in offs if o.get("classification") == "capitol" and o.get("address")), None)
+    offs = [o for o in (person.get("offices") or []) if o.get("address")]
+    districts = [o for o in offs if o.get("classification") == "district"]
+    capitol = next((o for o in offs if o.get("classification") == "capitol"), None)
+    # When a member has more than one district office (a satellite alongside the
+    # primary), prefer the non-satellite one so the card's District Office is the
+    # main location; fall back to the first district office, then — only when no
+    # office is classified at all — to the first addressed office.
+    district = next((o for o in districts if not _is_satellite(o)), None)
+    if district is None:
+        district = districts[0] if districts else None
     if district is None and capitol is None:
-        district = next((o for o in offs if o.get("address")), None)
+        district = next(iter(offs), None)
     result = {}
     dlines = _office_lines(district)
     if dlines:
