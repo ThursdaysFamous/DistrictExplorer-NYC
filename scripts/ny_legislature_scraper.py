@@ -27,13 +27,49 @@ API = "https://legislation.nysenate.gov/api/3/members/{year}?full=true&limit=100
 DEFAULT_OUT = os.path.join(os.path.dirname(__file__), ".cache", "ny_legislature_raw.json")
 
 
-def openstates_offices():
-    """{(CHAMBER, district:int): [office lines]} from the Open States v3 API.
+def _office_lines(office):
+    """Card-ready address lines for one Open States office: the ;-split street
+    address, then the phone and fax when present. [] when there's no address
+    (a phone with no address is not a mappable office — never a guessed one)."""
+    if not office or not office.get("address"):
+        return []
+    lines = [p.strip() for p in re.split(r"[;\n]+", office["address"]) if p.strip()]
+    if not lines:
+        return []
+    if office.get("voice"):
+        lines.append("Phone: " + office["voice"])
+    if office.get("fax"):
+        lines.append("Fax: " + office["fax"])
+    return lines
 
-    Uses `include=offices` and the member's district (`current_role.district`),
-    preferring the district office over the capitol one. Returns {} if
-    OPENSTATES_API_KEY is unset or anything goes wrong — the caller then ships
-    names-only (an address is never guessed).
+
+def person_offices(person):
+    """{'districtOffice'?: [...], 'capitolOffice'?: [...]} for one Open States
+    person — each key present only when that office has an address. The two feed
+    the card's "District Office" and "Albany Office" blocks respectively. A record
+    that labels neither is treated as district-only (the local, on-map office) so
+    the common case still shows a pin; a person with no addressed office maps to {}.
+    """
+    offs = person.get("offices") or []
+    district = next((o for o in offs if o.get("classification") == "district" and o.get("address")), None)
+    capitol = next((o for o in offs if o.get("classification") == "capitol" and o.get("address")), None)
+    if district is None and capitol is None:
+        district = next((o for o in offs if o.get("address")), None)
+    result = {}
+    dlines = _office_lines(district)
+    if dlines:
+        result["districtOffice"] = dlines
+    clines = _office_lines(capitol)
+    if clines:
+        result["capitolOffice"] = clines
+    return result
+
+
+def openstates_offices():
+    """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?}} from the
+    Open States v3 API (`include=offices`, keyed by `current_role.district`).
+    Returns {} if OPENSTATES_API_KEY is unset or anything goes wrong — the caller
+    then ships names-only (an address is never guessed).
     """
     key = os.environ.get("OPENSTATES_API_KEY")
     if not key:
@@ -58,16 +94,9 @@ def openstates_offices():
                         dnum = int(str(d).strip())
                     except ValueError:
                         continue
-                    offs = person.get("offices") or []
-                    chosen = next((o for o in offs if o.get("classification") == "district" and o.get("address")), None) \
-                        or next((o for o in offs if o.get("address")), None)
-                    if not chosen:
-                        continue
-                    lines = [p.strip() for p in re.split(r"[;\n]+", chosen.get("address", "")) if p.strip()]
-                    if chosen.get("voice"):
-                        lines.append("Phone: " + chosen["voice"])
-                    if lines:
-                        out[(chamber, dnum)] = lines
+                    offices = person_offices(person)
+                    if offices:
+                        out[(chamber, dnum)] = offices
                 pag = payload.get("pagination") or {}
                 if page >= (pag.get("max_page") or page):
                     break
@@ -76,7 +105,9 @@ def openstates_offices():
     except Exception as e:  # noqa: BLE001 — enrichment is best-effort, never fatal
         print("Open States office enrichment skipped: %s" % e, file=sys.stderr)
         return {}
-    print("Open States: office addresses for %d districts" % len(out), file=sys.stderr)
+    n_d = sum(1 for v in out.values() if v.get("districtOffice"))
+    n_c = sum(1 for v in out.values() if v.get("capitolOffice"))
+    print("Open States: %d district + %d Albany offices across %d districts" % (n_d, n_c, len(out)), file=sys.stderr)
     return out
 
 
@@ -106,10 +137,10 @@ def main():
     scraped_at = os.environ.get("SCRAPED_AT") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     source_url = "https://legislation.nysenate.gov/api/3/members/%s" % year
 
-    # Optional district-office enrichment from the Open States v3 API (structured
-    # offices; nysenate.gov / nyassembly.gov are WAF/JS-blocked). Needs a free
-    # OPENSTATES_API_KEY (§11); absent or on any error we ship names-only, never
-    # guessing an address.
+    # Optional district + Albany office enrichment from the Open States v3 API
+    # (structured offices; nysenate.gov WAF-blocks automated requests, so it is
+    # not a viable CI source). Needs a free OPENSTATES_API_KEY (§11); absent or on
+    # any error we ship names-only, never guessing an address.
     offices = openstates_offices()
 
     records = []
@@ -128,7 +159,10 @@ def main():
         }
         office = offices.get((chamber, int(district))) if district is not None else None
         if office:
-            rec["districtOffice"] = office
+            if office.get("districtOffice"):
+                rec["districtOffice"] = office["districtOffice"]
+            if office.get("capitolOffice"):
+                rec["capitolOffice"] = office["capitolOffice"]
         records.append(rec)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
