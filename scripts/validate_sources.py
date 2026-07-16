@@ -41,11 +41,11 @@ What it checks (findings carry a severity — FAIL, WARN, or OK):
      of its expected name (a rename usually means it was replaced).       [FAIL]
      For year-versioned datasets, the portal catalog is searched for a newer
      edition than the one in use.                                         [WARN]
-  3. TIGERweb Legislative MapServer: the layer index the app queries still
-     carries its expected name (an in-place roll silently changes which
-     vintage the app serves)                                             [FAIL]
+  3. TIGERweb Legislative MapServer: the layer index the BUILDER queries still
+     carries its expected name (an in-place roll means the pre-built file the
+     app now serves predates it and a rebuild is due)                     [FAIL]
      and the layer list is scanned for a successor vintage (CD119 → CD120/121,
-     2024 SLD → newer).                                                   [WARN]
+     2024 SLD → newer); the pre-built files also get a presence check.    [WARN]
   4. Anchor provenance: the cited source still resolves, and the built
      data/app file is present.                              [WARN / FAIL if gone]
   5. Live service endpoints (DCP ArcGIS, NYSED ArcGIS): reachable.        [WARN]
@@ -187,18 +187,26 @@ SOCRATA = [
                      "pattern": r"(\d{4})\s*-\s*\d{4}"}},
 ]
 
-# Census TIGERweb Legislative MapServer. The app queries these layers BY INDEX
-# (loadTigerLayer in index.html), and the Census rolls layer names and field
-# aliases in place with each Congress / state-legislature vintage — so an
-# expect_name mismatch at the index means the app is silently serving a
-# different vintage than this manifest documents [FAIL], and a higher
-# watch_pattern capture anywhere in the layer list means the successor vintage
-# has been published [WARN]. This is the runbook's CD119 → CD120/CD121 watch;
-# NY makes it non-optional (three congressional maps in three years).
+# Census TIGERweb Legislative MapServer. The chamber geometry is now PRE-BUILT
+# same-origin (scripts/build_legislative_boundaries.py, R2-2) — the app fetches
+# data/app/{congress,state-senate,state-assembly}-districts.json and only falls
+# back to a live loadTigerLayer(index) query if a fork ships no pre-built file
+# (that retained fallback is why the MapServer URL still lives in index.html and
+# the coherence check above still holds). The BUILDER queries these layers BY
+# INDEX, and the Census rolls layer names / field aliases in place with each
+# Congress / state-legislature vintage — so an expect_name mismatch at the index
+# means the shipped pre-built file predates a roll and a rebuild is due [FAIL],
+# and a higher watch_pattern capture anywhere in the layer list means the
+# successor vintage has been published and the file should be regenerated [WARN].
+# This is the runbook's CD119 → CD120/CD121 watch; NY makes it non-optional
+# (three congressional maps in three years), and it doubles as the staleness
+# detector the pre-build otherwise hides (a static file can't announce its
+# own vintage).
 TIGERWEB = {
     "mapserver": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer",
     "layers": [
         {"layer": "U.S. House District (NY)", "index": 0,
+         "app_file": "congress-districts.json",
          "expect_name": "119th Congressional Districts",
          "watch_pattern": r"(\d+)(?:st|nd|rd|th) Congressional Districts",
          "current": 119,
@@ -207,12 +215,14 @@ TIGERWEB = {
          "expected_successor": "a '120th/121st Congressional Districts' layer — the "
                                "CD119 -> CD121 roll; the layer-name scan watches for it"},
         {"layer": "NY State Senate District", "index": 1,
+         "app_file": "state-senate-districts.json",
          "expect_name": "2024 State Legislative Districts - Upper",
          "watch_pattern": r"(\d{4}) State Legislative Districts - Upper",
          "current": 2024,
          "vintage": "NY Senate: 2022 special-master (Cervas) map",
          "expected_successor": "a newer-year SLDU layer (next redraw or post-2030 census)"},
         {"layer": "NY State Assembly District", "index": 2,
+         "app_file": "state-assembly-districts.json",
          "expect_name": "2024 State Legislative Districts - Lower",
          "watch_pattern": r"(\d{4}) State Legislative Districts - Lower",
          "current": 2024,
@@ -437,6 +447,15 @@ def check_socrata(findings, offline):
 
 # ---- check 3: TIGERweb layer indexes hold their names; successor watch ------
 def check_tigerweb(findings, offline):
+    # The chamber geometry ships pre-built (R2-2); verify the files the app
+    # serves exist regardless of network. validate_index guards their feature
+    # counts; this guards existence from the source manifest's point of view,
+    # so a deleted pre-built file surfaces here too.
+    for cfg in TIGERWEB["layers"]:
+        if "app_file" in cfg and not os.path.exists(os.path.join(APP_DATA_DIR, cfg["app_file"])):
+            findings.add(FAIL, cfg["layer"],
+                         "pre-built data file data/app/%s is missing — run "
+                         "scripts/build_legislative_boundaries.py" % cfg["app_file"])
     if offline:
         return
     ok, meta = http_get(TIGERWEB["mapserver"] + "?f=json")
@@ -455,11 +474,12 @@ def check_tigerweb(findings, offline):
         live = by_index.get(cfg["index"])
         if live != cfg["expect_name"]:
             findings.add(FAIL, cfg["layer"],
-                         "MapServer layer %d is now %r — expected %r. The app queries "
-                         "by index, so it is serving a different vintage than the "
-                         "manifest documents; re-verify ground truth, rosters and "
-                         "update this manifest (REDISTRICTING_RUNBOOK)."
-                         % (cfg["index"], live, cfg["expect_name"]))
+                         "MapServer layer %d is now %r — expected %r. TIGERweb rolled "
+                         "the layer in place, so the pre-built data/app/%s predates the "
+                         "roll; re-run scripts/build_legislative_boundaries.py, re-verify "
+                         "ground truth + rosters, and update this manifest "
+                         "(REDISTRICTING_RUNBOOK)."
+                         % (cfg["index"], live, cfg["expect_name"], cfg["app_file"]))
             continue
         rx = re.compile(cfg["watch_pattern"])
         newest = cfg["current"]
@@ -471,9 +491,10 @@ def check_tigerweb(findings, offline):
                 newest_name = n
         if newest_name:
             findings.add(WARN, cfg["layer"],
-                         "successor vintage published on TIGERweb: %r (layer %d still "
-                         "serves %r). Plan the migration per REDISTRICTING_RUNBOOK."
-                         % (newest_name, cfg["index"], cfg["expect_name"]))
+                         "successor vintage published on TIGERweb: %r (the pre-built "
+                         "data/app/%s still serves %r). Regenerate with "
+                         "scripts/build_legislative_boundaries.py per REDISTRICTING_RUNBOOK."
+                         % (newest_name, cfg["app_file"], cfg["expect_name"]))
         else:
             findings.add(OK, cfg["layer"],
                          "layer %d — %r (no successor vintage on the service)"
