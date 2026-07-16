@@ -65,50 +65,71 @@ def person_offices(person):
     return result
 
 
+def _openstates_get(url, key, attempts=4):
+    """Fetch one Open States page as JSON, retrying with backoff on the transient
+    5xx gateway errors (502/503/504) and timeouts its include=offices queries throw
+    intermittently. A real client error (401/403/422) is not retried — it won't fix
+    itself. Raises the last error when every attempt fails."""
+    req = urllib.request.Request(url, headers={"X-API-KEY": key, "Accept": "application/json"})
+    last = None
+    for i in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code < 500 and e.code != 429:
+                raise
+        except Exception as e:  # noqa: BLE001 — timeout / URLError / transient network blip
+            last = e
+        if i < attempts - 1:
+            time.sleep(3 * (2 ** i))  # 3s, 6s, 12s
+    raise last
+
+
 def openstates_enrichment():
     """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?, 'party'?}}
     from the Open States v3 API (`include=offices`, keyed by
     `current_role.district`; party is the person's top-level party string).
-    Returns {} if OPENSTATES_API_KEY is unset or anything goes wrong — the caller
-    then ships names-only (an address or party is never guessed).
+    Returns {} if OPENSTATES_API_KEY is unset; on a page that keeps failing it logs
+    and keeps whatever earlier pages succeeded (partial enrichment beats none — an
+    address or party is never guessed).
     """
     key = os.environ.get("OPENSTATES_API_KEY")
     if not key:
         return {}
     out = {}
     CH = {"upper": "SENATE", "lower": "ASSEMBLY"}
-    try:
-        for org, chamber in CH.items():
-            page = 1
-            while page <= 10:  # NY: senate ~2 pp, assembly ~3 pp at per_page=50
-                url = ("https://v3.openstates.org/people?jurisdiction=New%20York"
-                       "&org_classification=" + org + "&include=offices&per_page=50&page=" + str(page))
-                req = urllib.request.Request(url, headers={"X-API-KEY": key, "Accept": "application/json"})
-                with urllib.request.urlopen(req, timeout=60) as r:
-                    payload = json.load(r)
-                for person in payload.get("results", []):
-                    role = person.get("current_role") or {}
-                    d = role.get("district")
-                    if d is None:
-                        continue
-                    try:
-                        dnum = int(str(d).strip())
-                    except ValueError:
-                        continue
-                    entry = person_offices(person)
-                    party = (person.get("party") or "").strip()
-                    if party:
-                        entry["party"] = party
-                    if entry:
-                        out[(chamber, dnum)] = entry
-                pag = payload.get("pagination") or {}
-                if page >= (pag.get("max_page") or page):
-                    break
-                page += 1
-                time.sleep(6)  # Open States free tier is rate-limited (~10/min)
-    except Exception as e:  # noqa: BLE001 — enrichment is best-effort, never fatal
-        print("Open States office enrichment skipped: %s" % e, file=sys.stderr)
-        return {}
+    for org, chamber in CH.items():
+        page = 1
+        while page <= 10:  # per_page=20: senate ~4 pp, assembly ~8 pp (both < cap)
+            url = ("https://v3.openstates.org/people?jurisdiction=New%20York"
+                   "&org_classification=" + org + "&include=offices&per_page=20&page=" + str(page))
+            try:
+                payload = _openstates_get(url, key)
+            except Exception as e:  # noqa: BLE001 — best-effort; keep any pages already gathered
+                print("Open States %s enrichment stopped at page %d: %s" % (chamber, page, e), file=sys.stderr)
+                break
+            for person in payload.get("results", []):
+                role = person.get("current_role") or {}
+                d = role.get("district")
+                if d is None:
+                    continue
+                try:
+                    dnum = int(str(d).strip())
+                except ValueError:
+                    continue
+                entry = person_offices(person)
+                party = (person.get("party") or "").strip()
+                if party:
+                    entry["party"] = party
+                if entry:
+                    out[(chamber, dnum)] = entry
+            pag = payload.get("pagination") or {}
+            if page >= (pag.get("max_page") or page):
+                break
+            page += 1
+            time.sleep(6)  # Open States free tier is rate-limited (~10/min)
     n_d = sum(1 for v in out.values() if v.get("districtOffice"))
     n_c = sum(1 for v in out.values() if v.get("capitolOffice"))
     n_p = sum(1 for v in out.values() if v.get("party"))
