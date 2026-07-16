@@ -3,6 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Google tag (gtag.js) — production host only; keeps local dev + CI out of analytics -->
+<script>
+  (function () {
+    if (location.hostname !== 'nyc.chidistricts.com') return;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-YPJ570LWJB';
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag('js', new Date());
+    gtag('config', 'G-YPJ570LWJB');
+  })();
+</script>
+
 <title>NYC District Explorer — find your districts &amp; representatives</title>
 <meta name="description" content="Find your NYC City Council district, community board, NYPD precinct, school district, and state and congressional districts — plus who represents you." />
 <meta name="robots" content="index, follow" />
