@@ -32,20 +32,58 @@ def clean_name(alt):
     return name or None
 
 
+# The District Office block on a council district page runs into a second
+# ("Legislative Office") address, a phone/fax number or label, and assorted
+# contact boilerplate. OFFICE_END marks where the street address ends. The old
+# regex instead ran to the first "..., NY 1XXXX" ZIP, which bled through every
+# page whose district office omits the ZIP (D2), drops "NY" (D43 "Brooklyn
+# 11204"), spells out the state (D14 "Bronx, New York 10453"), or lists no
+# street at all (D48) — swallowing the phone, fax, and the whole Legislative
+# Office address into one run-on line.
+OFFICE_END = re.compile(
+    r"(?:"
+    r"\bLegislative\s+Office\b"
+    r"|\bSend\s*Email\b|\bEmail\b"
+    r"|\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"   # a phone / fax number, anywhere
+    r"|\bTelephone\b|\bPhone\b|\bFax\b|\bTel\b"
+    r")", re.I)
+# A NYC ZIP (all five digits, "1XXXX"). Used to end the address at its own ZIP so
+# a trailing parenthetical or note (D17 "(Intersection…)", D40 "If you need…")
+# doesn't ride along, and a page-typo sixth digit (D4 "100170") is dropped.
+ZIP_RE = re.compile(r"1\d{4}")
+
+
 def district_office(url):
-    """Extract the 'District Office <address>' from a member's district page."""
+    """Extract the clean 'District Office' street address from a member's page.
+
+    Returns None (never a guess) when the page lists no street address — e.g.
+    District 48, whose District Office block is a phone number only.
+    """
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         html = urllib.request.urlopen(req, timeout=45).read().decode("utf-8", "replace")
     except Exception:  # noqa: BLE001 — the office is an enhancement, never fatal
         return None
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
-    # capture from after "District Office" up to and including the NY ZIP, so a
-    # trailing "Phone:"/suite/etc. doesn't defeat the match (34 -> most of 51).
-    m = re.search(r"District Office\s+(.+?(?:New York|Bronx|Brooklyn|Queens|Staten Island)?,?\s*NY\s+1\d{4})", text)
+    m = re.search(r"District Office\s+(.+)", text)
     if not m:
         return None
-    return re.sub(r"\s{2,}", " ", m.group(1).strip(" ,"))
+    tail = m.group(1)
+    # 1) Bound the block before the phone/fax/second-office noise, so the ZIP we
+    #    key off next is the district office's own — never the Legislative one's.
+    end = OFFICE_END.search(tail)
+    if end:
+        tail = tail[:end.start()]
+    # 2) If that block carries a ZIP, end the address right after it.
+    z = ZIP_RE.search(tail)
+    if z:
+        tail = tail[:z.end()]
+    addr = re.sub(r"\s{2,}", " ", tail).strip(" ,;.-")
+    # A real street address carries a house number and a street name; reject a
+    # bare phone number or stray fragment so the card never shows contact noise.
+    if len(addr) < 6 or not re.search(r"\d", addr) or not re.search(r"[A-Za-z]{3}", addr):
+        return None
+    return addr
 
 
 def parse(html):
