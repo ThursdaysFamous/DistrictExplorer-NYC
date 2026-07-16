@@ -94,6 +94,9 @@ GEOMETRY_FILES = {
     "borough-boundaries.json": (5, 5),
     "judicial-districts.json": (5, 5),
     "municipal-court-districts.json": (28, 28),
+    "congress-districts.json": (26, 26),  # 26 NY U.S. House districts; pre-built from TIGERweb by scripts/build_legislative_boundaries.py (R2-2)
+    "state-senate-districts.json": (63, 63),  # 63 NY State Senate districts; pre-built from TIGERweb layer 1
+    "state-assembly-districts.json": (150, 150),  # 150 NY State Assembly districts; pre-built from TIGERweb layer 2
 }
 
 # file -> minimum key count (officeholder rosters).

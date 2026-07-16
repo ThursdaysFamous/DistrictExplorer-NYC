@@ -3805,6 +3805,14 @@
     var features = geojson.features || [];
     var found = null;
     for (var i = 0; i < features.length; i++) {
+      // Cheap bounding-box reject before the full even-odd ray-cast: most
+      // features in a boundary set are nowhere near the point, and featureBBox
+      // memoizes per feature, so the linear scan's ray-casts collapse to the few
+      // candidates whose bbox contains the point (a production profile measured
+      // ~1.44 s in pointInRing). Answer-identical — a feature whose bbox excludes
+      // the point cannot contain it. (P7c / R2-6.)
+      var bb = featureBBox(features[i]);
+      if (point.lng < bb[0] || point.lng > bb[2] || point.lat < bb[1] || point.lat > bb[3]) continue;
       if (pointInGeometry(point, features[i].geometry)) { found = features[i]; break; }
     }
     geojson.__pointQueryCache = { point: point, feature: found };
@@ -4615,8 +4623,14 @@
    * chambers ship empty placeholders until the Thread 5 scrapes and degrade to
    * the official directory. */
   var loadCongressRoster = makeCached(function () { return fetchJSONWithRetry("data/app/congress-roster.json", {}, 2); });
+  // Geometry: pre-built same-origin (was a live ~1 MB-gzip TIGERweb fetch). Legislative
+  // districts are decadal — regenerate with scripts/build_legislative_boundaries.py on
+  // redistricting. (R2-2, back-ported from DistrictExplorer-CHI)
+  var loadCongressDistricts = makeCached(function () { return fetchJSONWithRetry("data/app/congress-districts.json", {}, 2); });
   registerIlgaChamber({
-    id: "congress", label: "U.S. House District", layerIndex: 0,
+    id: "congress", label: "U.S. House District",
+    layerIndex: 0, // fallback only — loadDistricts (pre-built) is used when present
+    loadDistricts: loadCongressDistricts,
     districtFields: ["cd119", "cd118", "cd", "cdfp"],
     loadRoster: function () { return loadCongressRoster(); },
     memberLabel: "U.S. Representative",
@@ -4625,8 +4639,13 @@
     style: { color: "#1D3557", weight: 2, fillColor: "#457B9D", fillOpacity: 0.05, dashArray: "8 3" }
   });
   var loadNySenateMembers = makeCached(function () { return fetchJSONWithRetry("data/app/ny-senate-members.json", {}, 2); });
+  // Geometry: pre-built same-origin (was live TIGERweb layer 1). Regenerate with
+  // scripts/build_legislative_boundaries.py on redistricting. (R2-2)
+  var loadNySenateDistricts = makeCached(function () { return fetchJSONWithRetry("data/app/state-senate-districts.json", {}, 2); });
   registerIlgaChamber({
-    id: "state-senate", label: "NY State Senate District", layerIndex: 1,
+    id: "state-senate", label: "NY State Senate District",
+    layerIndex: 1, // fallback only — loadDistricts (pre-built) is used when present
+    loadDistricts: loadNySenateDistricts,
     districtFields: ["sldu", "sldust"],
     loadRoster: function () { return loadNySenateMembers(); },
     memberLabel: "State Senator", capitolLabel: "Albany Office",
@@ -4635,8 +4654,13 @@
     style: { color: "#14532D", weight: 2, fillColor: "#2E7D5B", fillOpacity: 0.05, dashArray: "6 3" }
   });
   var loadNyAssemblyMembers = makeCached(function () { return fetchJSONWithRetry("data/app/ny-assembly-members.json", {}, 2); });
+  // Geometry: pre-built same-origin (was live TIGERweb layer 2). Regenerate with
+  // scripts/build_legislative_boundaries.py on redistricting. (R2-2)
+  var loadNyAssemblyDistricts = makeCached(function () { return fetchJSONWithRetry("data/app/state-assembly-districts.json", {}, 2); });
   registerIlgaChamber({
-    id: "state-assembly", label: "NY State Assembly District", layerIndex: 2,
+    id: "state-assembly", label: "NY State Assembly District",
+    layerIndex: 2, // fallback only — loadDistricts (pre-built) is used when present
+    loadDistricts: loadNyAssemblyDistricts,
     districtFields: ["sldl", "sldlst"],
     loadRoster: function () { return loadNyAssemblyMembers(); },
     memberLabel: "Assembly Member", capitolLabel: "Albany Office",
@@ -5103,7 +5127,11 @@
     // profileLabel?, directoryLabel?, capitolLabel? }. Member rows are
     // { name, party?, url?, districtOffice?, capitolOffice? }; office fields only
     // render when the roster supplies them (empty placeholder -> just the link).
-    var loadChamber = makeCached(function () { return loadTigerLayer(opts.layerIndex); });
+    // Metro-provided geometry loader wins; forks that haven't pre-built their
+    // chamber geometry fall back to the live TIGERweb fetch by layer index,
+    // unchanged. (opts.loadDistricts is a metro-specific value passed by the
+    // registration below — the engine only supplies the default.) R2-2.
+    var loadChamber = opts.loadDistricts || makeCached(function () { return loadTigerLayer(opts.layerIndex); });
     registerLayer({
       id: opts.id,
       group: "political",

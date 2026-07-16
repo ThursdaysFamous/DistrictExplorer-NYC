@@ -93,7 +93,10 @@
     "geometry": [
       { "file": "borough-boundaries.json", "min_features": 5, "max_features": 5 },
       { "file": "judicial-districts.json", "min_features": 5, "max_features": 5 },
-      { "file": "municipal-court-districts.json", "min_features": 28, "max_features": 28 }
+      { "file": "municipal-court-districts.json", "min_features": 28, "max_features": 28 },
+      { "file": "congress-districts.json", "min_features": 26, "max_features": 26, "note": "26 NY U.S. House districts; pre-built from TIGERweb by scripts/build_legislative_boundaries.py (R2-2)" },
+      { "file": "state-senate-districts.json", "min_features": 63, "max_features": 63, "note": "63 NY State Senate districts; pre-built from TIGERweb layer 1" },
+      { "file": "state-assembly-districts.json", "min_features": 150, "max_features": 150, "note": "150 NY State Assembly districts; pre-built from TIGERweb layer 2" }
     ],
     "rosters": [
       { "file": "nypd-precinct-info.json", "min_keys": 70,
@@ -109,7 +112,7 @@
     ]
   },
   "sw": {
-    "cache_name": "nyc-district-explorer-shell-v6",
+    "cache_name": "nyc-district-explorer-shell-v7",
     "shell_urls": [
       "./",
       "./manifest.webmanifest",
