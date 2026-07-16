@@ -7,9 +7,9 @@ pipeline: fetch the raw member list and write an intermediate JSON file with a
 the two data/app/*.json roster files with count guards.
 
 The API is key-gated (401 without a key). Set NYSENATE_API_KEY (a repo secret in
-CI; see §11.6). Party is NOT exposed by the /members endpoint, so it is stored
-null and never guessed — the card links to the member's chamber directory where
-party is shown.
+CI; see §11.6). Party is NOT exposed by the /members endpoint; it — with the
+district + Albany office addresses — comes from the optional Open States
+enrichment below when OPENSTATES_API_KEY is set, else an honest null.
 
 Usage:
     NYSENATE_API_KEY=... python3 scripts/ny_legislature_scraper.py [--out PATH]
@@ -65,11 +65,12 @@ def person_offices(person):
     return result
 
 
-def openstates_offices():
-    """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?}} from the
-    Open States v3 API (`include=offices`, keyed by `current_role.district`).
+def openstates_enrichment():
+    """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?, 'party'?}}
+    from the Open States v3 API (`include=offices`, keyed by
+    `current_role.district`; party is the person's top-level party string).
     Returns {} if OPENSTATES_API_KEY is unset or anything goes wrong — the caller
-    then ships names-only (an address is never guessed).
+    then ships names-only (an address or party is never guessed).
     """
     key = os.environ.get("OPENSTATES_API_KEY")
     if not key:
@@ -94,9 +95,12 @@ def openstates_offices():
                         dnum = int(str(d).strip())
                     except ValueError:
                         continue
-                    offices = person_offices(person)
-                    if offices:
-                        out[(chamber, dnum)] = offices
+                    entry = person_offices(person)
+                    party = (person.get("party") or "").strip()
+                    if party:
+                        entry["party"] = party
+                    if entry:
+                        out[(chamber, dnum)] = entry
                 pag = payload.get("pagination") or {}
                 if page >= (pag.get("max_page") or page):
                     break
@@ -107,7 +111,8 @@ def openstates_offices():
         return {}
     n_d = sum(1 for v in out.values() if v.get("districtOffice"))
     n_c = sum(1 for v in out.values() if v.get("capitolOffice"))
-    print("Open States: %d district + %d Albany offices across %d districts" % (n_d, n_c, len(out)), file=sys.stderr)
+    n_p = sum(1 for v in out.values() if v.get("party"))
+    print("Open States: %d district + %d Albany offices, %d parties across %d districts" % (n_d, n_c, n_p, len(out)), file=sys.stderr)
     return out
 
 
@@ -137,32 +142,34 @@ def main():
     scraped_at = os.environ.get("SCRAPED_AT") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     source_url = "https://legislation.nysenate.gov/api/3/members/%s" % year
 
-    # Optional district + Albany office enrichment from the Open States v3 API
-    # (structured offices; nysenate.gov WAF-blocks automated requests, so it is
-    # not a viable CI source). Needs a free OPENSTATES_API_KEY (§11); absent or on
-    # any error we ship names-only, never guessing an address.
-    offices = openstates_offices()
+    # Optional enrichment from the Open States v3 API — district + Albany office
+    # addresses and party (structured; nysenate.gov WAF-blocks automated requests,
+    # so it is not a viable CI source). Needs a free OPENSTATES_API_KEY (§11);
+    # absent or on any error we ship names-only, never guessing an address or party.
+    details = openstates_enrichment()
 
     records = []
     for m in items:
         person = m.get("person") or {}
         chamber = m.get("chamber")
         district = m.get("districtCode")
+        enrich = details.get((chamber, int(district))) if district is not None else None
         rec = {
             "chamber": chamber,                     # "SENATE" | "ASSEMBLY"
             "district": district,
             "name": m.get("fullName") or person.get("fullName"),
             "incumbent": bool(m.get("incumbent")),
-            "party": None,                          # not exposed by this endpoint — never guessed
+            # party isn't on the Open Legislation members endpoint; take it from
+            # the Open States enrichment when present, else an honest null.
+            "party": (enrich or {}).get("party"),
             "source_url": source_url,
             "scraped_at": scraped_at,
         }
-        office = offices.get((chamber, int(district))) if district is not None else None
-        if office:
-            if office.get("districtOffice"):
-                rec["districtOffice"] = office["districtOffice"]
-            if office.get("capitolOffice"):
-                rec["capitolOffice"] = office["capitolOffice"]
+        if enrich:
+            if enrich.get("districtOffice"):
+                rec["districtOffice"] = enrich["districtOffice"]
+            if enrich.get("capitolOffice"):
+                rec["capitolOffice"] = enrich["capitolOffice"]
         records.append(rec)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
