@@ -59,6 +59,8 @@ def resolve(records, chamber):
             entry = {"name": name, "party": r.get("party"), "_incumbent": bool(r.get("incumbent"))}
             if r.get("districtOffice"):
                 entry["districtOffice"] = r["districtOffice"]
+            if r.get("capitolOffice"):
+                entry["capitolOffice"] = r["capitolOffice"]
             by_district[key] = entry
     for v in by_district.values():
         v.pop("_incumbent", None)
