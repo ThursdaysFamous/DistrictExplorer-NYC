@@ -43,37 +43,54 @@ def _office_lines(office):
     return lines
 
 
-def _is_satellite(office):
-    """True when an office's Open States name marks it as a secondary location.
-    Open States' NY scraper carries nysenate.gov's section heading into the office
-    name, so a "Satellite Office" (e.g. Sen. Addabbo's Middle Village office, listed
-    alongside his primary Woodhaven one) is distinguishable from the main office."""
-    return bool(re.search(r"satellite|annex", office.get("name") or "", re.I))
+def _office_summary_line(office):
+    """A one-line "Also: <address> · Phone: <n>" for a *secondary* district office.
+
+    A member can have more than one district office (Sen. Addabbo has a Woodhaven
+    and a Middle Village one), but Open States labels both "District Office" and the
+    engine's card renders a single primary district office + the Albany office. The
+    extra offices ride along as these one-liners appended to the primary's block.
+
+    The embedded "Phone:"/number is load-bearing: the engine's map-pin geocoder
+    (officeAddressForGeocode) drops any line that looks like a phone/fax, so the pin
+    geocodes the primary office alone instead of two mashed-together addresses.
+    Returns None when there is no phone/fax to embed — without one this line would
+    be geocoded too and mis-pin the card, so such an office is skipped, not shown.
+    """
+    addr = re.sub(r"\s*;\s*", ", ", (office.get("address") or "").replace("\n", ", ")).strip()
+    if office.get("voice"):
+        contact = "Phone: " + office["voice"]
+    elif office.get("fax"):
+        contact = "Fax: " + office["fax"]
+    else:
+        return None
+    return "Also: " + addr + " · " + contact if addr else None
 
 
 def person_offices(person):
     """{'districtOffice'?: [...], 'capitolOffice'?: [...]} for one Open States
-    person — each key present only when that office has an address. The two feed
-    the card's "District Office" and "Albany Office" blocks respectively. A record
-    that labels neither is treated as district-only (the local, on-map office) so
-    the common case still shows a pin; a person with no addressed office maps to {}.
+    person — each key present only when that office has an address. They feed the
+    card's "District Office" and "Albany Office" blocks. Open States can't tell a
+    member's primary district office from a satellite (both are labelled "District
+    Office"), so rather than guess we show them all: the first district office is
+    the primary (full lines, and the one the card pins) and any others follow as
+    "Also:" one-liners. A record that classifies nothing is treated as district-
+    only (so the common case still pins); a person with no addressed office -> {}.
     """
     offs = [o for o in (person.get("offices") or []) if o.get("address")]
     districts = [o for o in offs if o.get("classification") == "district"]
     capitol = next((o for o in offs if o.get("classification") == "capitol"), None)
-    # When a member has more than one district office (a satellite alongside the
-    # primary), prefer the non-satellite one so the card's District Office is the
-    # main location; fall back to the first district office, then — only when no
-    # office is classified at all — to the first addressed office.
-    district = next((o for o in districts if not _is_satellite(o)), None)
-    if district is None:
-        district = districts[0] if districts else None
-    if district is None and capitol is None:
-        district = next(iter(offs), None)
+    if not districts and capitol is None:
+        districts = offs[:1]  # nothing classified — treat the first office as the district one
     result = {}
-    dlines = _office_lines(district)
-    if dlines:
-        result["districtOffice"] = dlines
+    if districts:
+        lines = _office_lines(districts[0])
+        for extra in districts[1:]:
+            summary = _office_summary_line(extra)
+            if summary:
+                lines.append(summary)
+        if lines:
+            result["districtOffice"] = lines
     clines = _office_lines(capitol)
     if clines:
         result["capitolOffice"] = clines
