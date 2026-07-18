@@ -2119,6 +2119,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <a href="https://data.nysed.gov" target="_blank" rel="noopener">School districts © NYS Education Dept</a>
       <a href="https://github.com/unitedstates/congress-legislators" target="_blank" rel="noopener">unitedstates/congress-legislators</a>
       <a href="https://openstates.org" target="_blank" rel="noopener">State legislator offices © Open States</a>
+      <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank" rel="noopener">USGS The National Map (post offices)</a>
+      <a href="https://gis.ny.gov" target="_blank" rel="noopener">Early-voting sites © NYS ITS Geospatial Services / NYS &amp; NYC Boards of Elections</a>
     </div>
     <!-- ==== ENGINE:BEGIN metro-links-html ==== -->
     <div class="footer-metros" id="footer-metros" hidden>
@@ -3570,7 +3572,10 @@ function initNycExplorer() {
     "es-zone",           // elementary zones — smallest polygon layer
     "school-site",       // point marker — always topmost
     "police-station",    // point marker — always topmost
-    "fire-station"       // point marker — always topmost
+    "fire-station",      // point marker — always topmost
+    "post-office",       // point marker — always topmost
+    "library",           // point marker — always topmost
+    "early-voting"       // point marker — always topmost
   ];
   /* ==== GENERATED:END layer-area-rank ==== */
 
@@ -5176,6 +5181,97 @@ function initNycExplorer() {
     ]
   });
 
+  /* =========================================================================
+   * AMENITY POINT LAYERS — Post Office / Library / Early Voting
+   * Same nearest-N pattern as Police Station / Firehouse above (haversine,
+   * straight-line, N=3).
+   * ======================================================================= */
+
+  /* ---------- Post Offices (nearest 3) — USGS National Map structures layer 38.
+   * Successor to the retired HIFLD Open post-office layer. Country-wide, so
+   * the METRO_BBOX envelope is mandatory; f=geojson serves lowercase property
+   * names (name/address/city/state/zipcode). CORS-open; public domain
+   * ("USGS The National Map"). ---------- */
+  var USGS_POST_OFFICE_LAYER = "https://carto.nationalmap.gov/arcgis/rest/services/structures/MapServer/38";
+  var loadPostOffices = makeCached(function () {
+    var url = USGS_POST_OFFICE_LAYER + "/query?geometry=" +
+      [METRO_BBOX.minLng, METRO_BBOX.minLat, METRO_BBOX.maxLng, METRO_BBOX.maxLat].join(",") +
+      "&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects" +
+      "&where=1%3D1&outFields=NAME,ADDRESS,CITY,STATE,ZIPCODE&outSR=4326&f=geojson&geometryPrecision=6";
+    return fetchJSONWithRetry(url, { timeoutMs: REMOTE_GEOJSON_TIMEOUT_MS }, 2).then(function (gj) {
+      if (!hasUsableGeometry(gj)) throw new Error("no usable geometry from USGS structures layer 38");
+      return gj;
+    });
+  });
+  registerNearestPointLayer({
+    id: "post-office",
+    group: "geography",
+    label: "Post Office",
+    color: "#4B2E83", fill: "#B39DDB",
+    loader: loadPostOffices,
+    intro: "Nearest post offices (USGS National Map structures data), straight-line distance:",
+    line: function (p) {
+      var name = findPropCI(p, ["name"]);
+      var addr = findPropCI(p, ["address"]);
+      var city = findPropCI(p, ["city"]);
+      var zip = findPropCI(p, ["zipcode", "zip"]);
+      return (name ? String(name) : "Post office") + (addr ? " — " + String(addr) : "") + (city ? ", " + String(city) : "") + (zip ? " " + String(zip) : "");
+    }
+  });
+
+  /* ---------- Libraries (nearest 3) — Socrata feuq-due4 (216: NYPL/BPL/QPL).
+   * Branch rows are slow-moving (last bulk refresh ~2016) but locations are
+   * near-static; the per-system datasets are the fresher alternates if hours
+   * are ever wanted. ---------- */
+  var loadLibraries = makeCachedLoader("feuq-due4");
+  registerNearestPointLayer({
+    id: "library",
+    group: "geography",
+    label: "Library",
+    color: "#8A5A00", fill: "#F2B84B",
+    loader: loadLibraries,
+    intro: "Nearest public library branches (NYPL / BPL / QPL), straight-line distance:",
+    line: function (p) {
+      var name = findPropCI(p, ["name"]);
+      var system = findPropCI(p, ["system"]);
+      var housenum = findPropCI(p, ["housenum"]);
+      var street = findPropCI(p, ["streetname"]);
+      var zip = findPropCI(p, ["zip"]);
+      var addr = (housenum && street) ? String(housenum) + " " + String(street) : (street ? String(street) : "");
+      return (name ? String(name) : "Library") + (system ? " (" + String(system) + ")" : "") + (addr ? " — " + addr : "") + (zip ? ", " + String(zip) : "");
+    }
+  });
+
+  /* ---------- Early Voting Sites (nearest 3) — NYS GIS Program Office
+   * elections service (same EbVsqZ18sv1kVJ3k org as NYS_Schools), layer 1
+   * "Early Voting Polling Sites NYC" (158, kept current per election cycle
+   * by the NYS/NYC Boards of Elections). HONESTY NOTE: unlike the rest of
+   * NY State, NYC assigns each voter one specific early-voting site — the
+   * nearest site is NOT necessarily yours, and the card says so, pointing
+   * at findmypollsite.vote.nyc as the authoritative lookup (same reason
+   * election-day layer 3 is deliberately not used). Paged loader: one page
+   * today, robust if the list ever passes the 1000 cap. ---------- */
+  var NYS_EARLY_VOTING_LAYER = "https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/arcgis/rest/services/NYS_Elections_Districts_and_Polling_Locations/FeatureServer/1";
+  var loadEarlyVotingSites = makeCached(function () {
+    return loadArcGISPaged(NYS_EARLY_VOTING_LAYER,
+      "USER_Poll_Site_Name,USER_Poll_Site_Address,USER_City,USER_ZipCode,USER_County");
+  });
+  registerNearestPointLayer({
+    id: "early-voting",
+    group: "political",
+    label: "Early Voting Site",
+    color: "#7A1E5C", fill: "#E060A8",
+    loader: loadEarlyVotingSites,
+    intro: "Nearest early-voting sites, for reference (NYS/NYC Boards of Elections data). NYC assigns each voter a specific early-voting site, which may not be the nearest one — find yours and its hours at findmypollsite.vote.nyc:",
+    line: function (p) {
+      var name = findPropCI(p, ["user_poll_site_name", "name"]);
+      var addr = findPropCI(p, ["user_poll_site_address", "address"]);
+      var city = findPropCI(p, ["user_city", "city"]);
+      var zip = findPropCI(p, ["user_zipcode", "zipcode", "zip"]);
+      return (name ? String(name) : "Early-voting site") + (addr ? " — " + String(addr) : "") + (city ? ", " + String(city) : "") + (zip ? " " + String(zip) : "");
+    }
+  });
+
 
   /* =========================================================================
    * THREAD 3 — SCHOOLS (METRO_EXPANSION_PLAYBOOK §7 rows 9–14)
@@ -6435,7 +6531,7 @@ function initNycExplorer() {
   drawOutOfScopeMask(loadBoroughBoundaries);
 
   var verifiedEl = document.getElementById("verified-date");
-  verifiedEl.textContent = "July 10, 2026";
+  verifiedEl.textContent = "July 18, 2026";
 
   /* ==== ENGINE:BEGIN metro-links ==== */
   (function renderMetroLinks() {

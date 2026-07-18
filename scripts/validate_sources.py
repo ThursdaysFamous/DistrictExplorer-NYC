@@ -107,6 +107,10 @@ HTTP_TIMEOUT = 25
 # monthly tracking issue always shows the full watch list.
 # ---------------------------------------------------------------------------
 SOCRATA = [
+    {"id": "feuq-due4", "layer": "Library branches (nearest N)",
+     "name_contains": "LIBRARY",
+     "vintage": "citywide NYPL/BPL/QPL branch points (rows ~2016; branch locations near-static)",
+     "expected_successor": "updated in place; per-system datasets (e.g. Queens kh3d-xhq7) are the fresher alternates if hours are ever wanted"},
     {"id": "872g-cjhh", "layer": "City Council District (51)",
      "name_contains": "City Council Districts",
      "vintage": "2023 Districting Commission map (effective Feb 2023)",
@@ -298,6 +302,14 @@ ENDPOINTS = [
      "app_refs": [NYSED_BASE, "loadNysedLayerPaged(4"],
      "vintage": "live NYS_Schools 'Charter K-12' layer",
      "expected_successor": "updated in place; index reshuffle surfaces as unreachable"},
+    {"layer": "Post offices (USGS National Map structures layer 38)",
+     "url": "https://carto.nationalmap.gov/arcgis/rest/services/structures/MapServer/38",
+     "vintage": "national NGDA structures layer, METRO_BBOX envelope-queried at runtime",
+     "expected_successor": "updated in place (USGS; successor to the retired HIFLD Open layer)"},
+    {"layer": "Early-voting poll sites (NYS GIS elections service layer 1)",
+     "url": "https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/arcgis/rest/services/NYS_Elections_Districts_and_Polling_Locations/FeatureServer/1",
+     "vintage": "NYS/NYC BOE early-voting sites, refreshed per election cycle in place",
+     "expected_successor": "updated in place; a service rename surfaces as unreachable"},
 ]
 
 FAIL, WARN, OK = "FAIL", "WARN", "OK"
