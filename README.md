@@ -24,10 +24,10 @@ Pick a point. The app runs a point-in-district lookup across every layer you hav
 
 | Group | Layers |
 |---|---|
-| **Political** (10) | City Council District · Election District · Community District / Community Board · U.S. House District · NY State Senate · NY State Assembly · NY Supreme Court Judicial District · Civil Court (Municipal Court) District · Borough President · District Attorney |
+| **Political** (11) | City Council District · Election District · Community District / Community Board · U.S. House District · NY State Senate · NY State Assembly · NY Supreme Court Judicial District · Civil Court (Municipal Court) District · Borough President · District Attorney · Early Voting Site (nearest 3) |
 | **Public Safety** (5) | NYPD Precinct · NYPD Sector · Police Station (nearest 3) · Firehouse (nearest 3) · FDNY Battalion |
 | **Schools** (6) | Elementary / Middle / High School Zone · Community School District · Community Education Council · School (nearest 3) |
-| **Geography** (3) | Neighborhood (NTA) · ZIP Code (MODZCTA) · Borough / County |
+| **Geography** (5) | Neighborhood (NTA) · ZIP Code (MODZCTA) · Borough / County · Post Office (nearest 3) · Library (nearest 3) |
 
 Every result card is independent: a layer whose data source is down shows an error with a Retry button in that card and never affects the others. Because NYC is water-heavy, many in-bounds clicks land in rivers or bays and honestly resolve to **no district** — the app never snaps to the nearest.
 
@@ -49,7 +49,7 @@ Stable core + pluggable layer modules, all inside `index.html`. The engine contr
 
 | Source | Used for |
 |---|---|
-| [NYC Open Data](https://opendata.cityofnewyork.us) (Socrata) | Council, community & election districts, precincts/sectors, firehouses, school zones/districts, NTAs, ZIP (MODZCTA), community-board leadership |
+| [NYC Open Data](https://opendata.cityofnewyork.us) (Socrata) | Council, community & election districts, precincts/sectors, firehouses, library branches, school zones/districts, NTAs, ZIP (MODZCTA), community-board leadership |
 | NYC Planning ArcGIS (`services5.arcgis.com/GfwWNkhOj9bNBqoJ`) | Election districts, FDNY battalions |
 | NYSED ArcGIS (`services6.arcgis.com/EbVsqZ18sv1kVJ3k`) | School points (public / charter / private) |
 | [U.S. Census TIGERweb](https://tigerweb.geo.census.gov) | U.S. House, NY Senate, NY Assembly boundaries; judicial/municipal county geometry |
@@ -57,6 +57,8 @@ Stable core + pluggable layer modules, all inside `index.html`. The engine contr
 | NY Open Legislation API · [Open States](https://openstates.org) (district offices) | NY Senate & Assembly roster + office addresses (weekly CI) |
 | council.nyc.gov · nyc.gov precinct pages · schools.nyc.gov (CI scrapers) | City Council roster + district offices, NYPD precinct commanders, CEC members |
 | [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc) (Pelias, keyless, PAD-backed) | Address search + address pins |
+| [USGS The National Map](https://www.usgs.gov/programs/national-geospatial-program/national-map) structures layer 38 | Post office locations (live bbox query; public domain) |
+| NYS GIS Program Office elections service (`services6.arcgis.com/EbVsqZ18sv1kVJ3k`) | Early-voting sites (NYS ITS Geospatial Services / NYS & NYC Boards of Elections) |
 
 ## Repository layout
 
