@@ -5245,10 +5245,12 @@ function initNycExplorer() {
   /* ---------- Early Voting Sites (nearest 3) — NYS GIS Program Office
    * elections service (same EbVsqZ18sv1kVJ3k org as NYS_Schools), layer 1
    * "Early Voting Polling Sites NYC" (158, kept current per election cycle
-   * by the NYS/NYC Boards of Elections). Early-voting sites are open to any
-   * voter in their county — honest for nearest-N, unlike assigned
-   * election-day poll sites (that's layer 3, deliberately not used). Paged
-   * loader: one page today, robust if the list ever passes the 1000 cap. ---------- */
+   * by the NYS/NYC Boards of Elections). HONESTY NOTE: unlike the rest of
+   * NY State, NYC assigns each voter one specific early-voting site — the
+   * nearest site is NOT necessarily yours, and the card says so, pointing
+   * at findmypollsite.vote.nyc as the authoritative lookup (same reason
+   * election-day layer 3 is deliberately not used). Paged loader: one page
+   * today, robust if the list ever passes the 1000 cap. ---------- */
   var NYS_EARLY_VOTING_LAYER = "https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/arcgis/rest/services/NYS_Elections_Districts_and_Polling_Locations/FeatureServer/1";
   var loadEarlyVotingSites = makeCached(function () {
     return loadArcGISPaged(NYS_EARLY_VOTING_LAYER,
@@ -5260,7 +5262,7 @@ function initNycExplorer() {
     label: "Early Voting Site",
     color: "#7A1E5C", fill: "#E060A8",
     loader: loadEarlyVotingSites,
-    intro: "Nearest early-voting sites (NYS/NYC Boards of Elections data; any voter may use any early-voting site in their county — confirm sites and hours at findmypollsite.vote.nyc):",
+    intro: "Nearest early-voting sites, for reference (NYS/NYC Boards of Elections data). NYC assigns each voter a specific early-voting site, which may not be the nearest one — find yours and its hours at findmypollsite.vote.nyc:",
     line: function (p) {
       var name = findPropCI(p, ["user_poll_site_name", "name"]);
       var addr = findPropCI(p, ["user_poll_site_address", "address"]);
