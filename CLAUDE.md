@@ -58,6 +58,8 @@ The metro-agnostic engine inside `index.html` is fenced with `/* ==== ENGINE:BEG
 
 Shared utilities (reuse these; don't reinvent): `sanitize()`/`textContent` for every external string, `pointInGeometry()`, `fetchJSONWithRetry()`, `haversineMiles()`. Layer modules register via `registerLayer({ id, group, label, overlay, query, render })`; families go through the factories (`registerPolygonLayer`, `registerSchoolZone`, `registerCpsNetwork`, `registerIlgaChamber` — shared engine names kept fork-agnostic) with NYC-side wrappers carrying city dataset schemas (`registerNycZone`, `registerBoroughOfficeLayer`). The two invariants that pervade the code: the stale-async `sequence` guard, and per-layer failure isolation (one layer's dead source never breaks another's card).
 
+**Result-card content order (fleet convention):** a card leads with the layer name (the card header), then the district identifier, then — wherever a verifiable source exists — the representative(s)/officeholder(s), the office location, contact info (phone/email), and a link to more detail, in that order. Deviations are allowed where the concept demands them (nearest-N lists, layers with no elected officer), but when identity, location, or contact data exists in a layer's source, surface it on the card rather than leaving it in the dataset. Known gaps are tracked in the Chicago repo's `docs/DATA_LAYER_GUIDEBOOK.md` backlog.
+
 **Honesty rules (non-negotiable):** officeholder data is never guessed — where no verifiable roster exists the card links to the official body (`cec-members.json` ships as a placeholder for exactly this reason (CEC members are decentralized across independent council sites, no scrapable source); `borough-officials.json` is operator-maintained and now carries verified BP/DA names; NYPD resolves ~74/78 commanding officers with honest nulls). External strings are always sanitized or set via `textContent`. Water clicks resolve honestly to "no district" — much of the in-bounds map is river/bay (METRO_BBOX runs SW Tottenville → NE north Bronx, out to the Rockaways) and the app never snaps to the nearest shore.
 
 ## NYC-specific notes worth keeping
@@ -83,4 +85,5 @@ Most layers fetch live public APIs at runtime (NYC Open Data / Socrata, ArcGIS, 
 
 - Code style is ES5-flavored (`var`, `function` expressions) throughout `index.html` — match it when editing existing modules.
 - The "verified" date shown in the UI is hardcoded near the boot block in `index.html`; bump it when reverifying data sources.
+- `WATCH.md` at repo root is NYC's redistricting watch calendar (when to look); the response procedure is the Chicago-mastered `docs/REDISTRICTING_RUNBOOK.md`.
 - This is a public-facing civic tool that explicitly disclaims legal precision — accuracy and the honesty rules matter more than feature velocity.

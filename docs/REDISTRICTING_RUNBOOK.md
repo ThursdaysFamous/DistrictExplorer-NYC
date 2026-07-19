@@ -12,5 +12,9 @@ through two mechanisms the master defines:
   NYC source manifest with per-source `vintage` / `expected_successor` fields
   and the TIGERweb congressional layer-name watch (CD119 → CD121), run monthly
   by `.github/workflows/validate-sources.yml`.
-- **Response facts:** the metro worksheet (`docs/NYC_CONFORMANCE.md` Phase 2)
-  feeds the master's per-metro appendix tables once Conversion 2 is live.
+- **Response facts:** `metro-worksheet.json` (the live per-fork source of
+  truth; the historical conformance record is archived at
+  `docs/archive/NYC_CONFORMANCE.md`) feeds the master's per-metro appendix
+  tables.
+- **When to look:** the dates live in this repo's root `WATCH.md` — the
+  per-metro redistricting watch calendar.
