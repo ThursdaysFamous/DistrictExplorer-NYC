@@ -4884,17 +4884,67 @@ function initNycExplorer() {
   var loadBoroughBoundaries = makeCached(function () {
     return fetchJSONWithRetry("data/app/borough-boundaries.json", {}, 2);
   });
-  registerPolygonLayer({
+  /* Bespoke rather than factory so the card can join the County Clerk from
+   * borough-officials.json (operator-verified; see the source's _verified
+   * note). NYC County Clerks are APPOINTED by the Appellate Division, so the
+   * row is labeled appointed — and only offices that publish the incumbent's
+   * name on their own nycourts.gov page get a name row (Bronx, Kings today);
+   * the rest carry the verifiable office/link rows only. loadBoroughOfficials
+   * is assigned later in this IIFE (Thread 4) — safe here because query/render
+   * run at click time, long after boot. */
+  registerLayer({
     id: "borough",
     group: "geography",
     label: "Borough / County",
-    loader: loadBoroughBoundaries,
-    style: { color: "#8C6A2E", weight: 2.5, fillColor: "#8C6A2E", fillOpacity: 0.04 },
-    fields: [
-      { name: "borough", label: "Borough", keys: ["boroname"], primary: true },
-      { name: "county", label: "County", keys: ["county"] },
-      { name: "countyfips", label: "County FIPS", keys: ["countyfips"] }
-    ]
+    overlay: {
+      load: loadBoroughBoundaries,
+      style: { color: "#8C6A2E", weight: 2.5, fillColor: "#8C6A2E", fillOpacity: 0.04 }
+    },
+    hoverName: function (feature) {
+      var name = findPropCI(feature.properties || {}, ["boroname"]);
+      return name != null ? String(name) : null;
+    },
+    query: function (point, seq) {
+      return Promise.all([
+        loadBoroughBoundaries(),
+        loadBoroughOfficials().catch(function () { return {}; })
+      ]).then(function (results) {
+        var geojson = results[0], officials = results[1];
+        var feature = findFeatureContaining(geojson, point);
+        if (!feature) return null;
+        var props = feature.properties || {};
+        var borough = findPropCI(props, ["boroname"]);
+        var row = borough != null ? officials[String(borough)] : null;
+        return {
+          seq: seq,
+          borough: borough,
+          county: findPropCI(props, ["county"]),
+          countyfips: findPropCI(props, ["countyfips"]),
+          clerk: row ? row.clerk : null
+        };
+      });
+    },
+    render: function (result) {
+      // Card convention: identifier → officer → location → contact → link.
+      var fields = [{ label: "Borough", value: result.borough != null ? String(result.borough) : "Unknown" }];
+      if (result.county != null) fields.push({ label: "County", value: String(result.county) });
+      if (result.countyfips != null) fields.push({ label: "County FIPS", value: String(result.countyfips) });
+      var clerk = result.clerk;
+      if (clerk) {
+        if (clerk.name) fields.push({ label: "County Clerk", value: String(clerk.name) + " — appointed" });
+        if (clerk.address) fields.push({ label: "Clerk's Office", value: String(clerk.address), pin: "#8C6A2E" });
+        if (clerk.phone) fields.push({ label: "Phone", value: String(clerk.phone) });
+        var page = safeHttpUrl(clerk.url);
+        if (page) {
+          fields.push({ label: "Clerk info", html: '<a href="' + sanitize(page) + '" target="_blank" rel="noopener">County Clerk\u2019s Office (NY Courts)</a>' });
+        }
+      }
+      return renderFieldList(fields);
+    },
+    pointOfInterest: function (result) {
+      if (!result.clerk || !result.clerk.address) return null;
+      return { label: "County Clerk\u2019s Office", address: String(result.clerk.address) };
+    }
   });
 
   /* ---------- NY Supreme Court Judicial District (offline anchor) ----------

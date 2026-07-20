@@ -7,6 +7,10 @@
 "da": {
 "name": "Alvin Bragg",
 "url": "https://manhattanda.org/"
+},
+"clerk": {
+"url": "https://www.nycourts.gov/courts/1st-judicial-district/new-york-county-clerks-office",
+"address": "60 Centre Street, Room 161, New York, NY 10007"
 }
 },
 "Bronx": {
@@ -17,6 +21,11 @@
 "da": {
 "name": "Darcel D. Clark",
 "url": "https://bronxda.nyc.gov/"
+},
+"clerk": {
+"name": "Hon. Ischia Bravo",
+"url": "https://www.nycourts.gov/courts/12th-judicial-district/bronx-county-clerks-office",
+"address": "851 Grand Concourse, Room 118, Bronx, NY 10451"
 }
 },
 "Brooklyn": {
@@ -27,6 +36,11 @@
 "da": {
 "name": "Eric Gonzalez",
 "url": "https://www.brooklynda.org/"
+},
+"clerk": {
+"name": "Hon. Nancy T. Sunshine",
+"url": "https://www.nycourts.gov/courts/2nd-judicial-district/kings-county-clerks-office",
+"address": "360 Adams Street, Brooklyn, NY 11201"
 }
 },
 "Queens": {
@@ -37,6 +51,11 @@
 "da": {
 "name": "Melinda Katz",
 "url": "https://queensda.org/"
+},
+"clerk": {
+"url": "https://www.nycourts.gov/courts/11th-judicial-district/queens-county-clerks-office",
+"address": "88-11 Sutphin Blvd #106, Jamaica, NY 11435",
+"phone": "(718) 298-0601"
 }
 },
 "Staten Island": {
@@ -47,6 +66,9 @@
 "da": {
 "name": "Michael E. McMahon",
 "url": "https://www.statenislandda.org/"
+},
+"clerk": {
+"url": "https://www.nycourts.gov/courts/13th-judicial-district/richmond-county-clerks-office"
 }
 }
 }
