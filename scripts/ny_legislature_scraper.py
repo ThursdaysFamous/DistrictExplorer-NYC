@@ -119,10 +119,24 @@ def _openstates_get(url, key, attempts=4):
     raise last
 
 
+def _person_homepage(person):
+    """The member's own official page from Open States `links` — the first
+    http(s) entry (Open States lists the state-site member page first). Never
+    guessed: no usable link -> None, and the card then shows the chamber
+    directory honestly labeled as a directory (the chamber factory keys the
+    link label off the presence of a member url)."""
+    for link in person.get("links") or []:
+        url = (link.get("url") or "").strip()
+        if url.startswith("http://") or url.startswith("https://"):
+            return url
+    return None
+
+
 def openstates_enrichment():
-    """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?, 'party'?}}
+    """{(CHAMBER, district:int): {'districtOffice'?, 'capitolOffice'?, 'party'?, 'url'?}}
     from the Open States v3 API (`include=offices`, keyed by
-    `current_role.district`; party is the person's top-level party string).
+    `current_role.district`; party is the person's top-level party string; url is
+    the member's official page from `links`).
     Returns {} if OPENSTATES_API_KEY is unset; on a page that keeps failing it logs
     and keeps whatever earlier pages succeeded (partial enrichment beats none — an
     address or party is never guessed).
@@ -155,6 +169,9 @@ def openstates_enrichment():
                 party = (person.get("party") or "").strip()
                 if party:
                     entry["party"] = party
+                homepage = _person_homepage(person)
+                if homepage:
+                    entry["url"] = homepage
                 if entry:
                     out[(chamber, dnum)] = entry
             pag = payload.get("pagination") or {}
@@ -165,7 +182,8 @@ def openstates_enrichment():
     n_d = sum(1 for v in out.values() if v.get("districtOffice"))
     n_c = sum(1 for v in out.values() if v.get("capitolOffice"))
     n_p = sum(1 for v in out.values() if v.get("party"))
-    print("Open States: %d district + %d Albany offices, %d parties across %d districts" % (n_d, n_c, n_p, len(out)), file=sys.stderr)
+    n_u = sum(1 for v in out.values() if v.get("url"))
+    print("Open States: %d district + %d Albany offices, %d parties, %d member pages across %d districts" % (n_d, n_c, n_p, n_u, len(out)), file=sys.stderr)
     return out
 
 
@@ -223,6 +241,8 @@ def main():
                 rec["districtOffice"] = enrich["districtOffice"]
             if enrich.get("capitolOffice"):
                 rec["capitolOffice"] = enrich["capitolOffice"]
+            if enrich.get("url"):
+                rec["url"] = enrich["url"]
         records.append(rec)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
