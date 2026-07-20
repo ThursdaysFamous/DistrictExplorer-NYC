@@ -5058,15 +5058,20 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
+      // Card convention: identifier → representative → location → contact → link.
       var fields = [{ label: "Precinct", value: result.precinct != null ? String(result.precinct) : "Unknown" }];
       if (result.commander) fields.push({ label: "Commanding Officer", value: String(result.commander) });
-      if (result.phone) fields.push({ label: "Phone", value: String(result.phone) });
       if (result.stationAddress) {
         var stn = (result.stationName ? toTitleCase(result.stationName) + " — " : "") + toTitleCase(result.stationAddress);
         fields.push({ label: "Station house", value: stn, pin: "#C8102E" });
       }
+      if (result.phone) fields.push({ label: "Phone", value: String(result.phone) });
       if (result.precinct != null) {
-        var url = "https://www.nyc.gov/site/nypd/bureaus/patrol/precincts/" + ordinalSuffix(result.precinct) + "-precinct.page";
+        // Prefer the roster's scraped source_url (the exact page the commander
+        // name came from); reconstruct from the precinct number only when the
+        // roster row is absent.
+        var url = safeHttpUrl(result.sourceUrl) ||
+          ("https://www.nyc.gov/site/nypd/bureaus/patrol/precincts/" + ordinalSuffix(result.precinct) + "-precinct.page");
         fields.push({ label: "Precinct page", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYPD ' + ordinalSuffix(result.precinct) + ' Precinct</a>' });
       }
       fields.push({ label: "Civilian oversight", html: '<a href="https://www.nyc.gov/site/ccrb/index.page" target="_blank" rel="noopener">CCRB</a> — appointed, citywide' });
@@ -5293,6 +5298,11 @@ function initNycExplorer() {
     opts.nameKeys = ["label", "sch_name", "short_name", "school_name", "schoolname", "name"];
     opts.idKeys = ["dbn", "school_id", "schoolid"];
     opts.districtKeys = ["schooldist", "zoned_dist"];
+    // addressKeys/gradeKeys deliberately unwired: the DOE zone datasets carry
+    // no school address or grade fields (verified against the SY2024-25 column
+    // list — dbn/label/schooldist/esid|msid|hsid only), so the factory's
+    // Address/Grades rows and its address map pin stay dormant here by design.
+    // If a future edition adds them, wire the keys and the pin lights up.
     opts.requireId = true;
     opts.profileHtml = schoolProfileHtml;
     registerSchoolZone(opts);

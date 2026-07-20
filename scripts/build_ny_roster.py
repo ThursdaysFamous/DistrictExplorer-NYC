@@ -61,6 +61,8 @@ def resolve(records, chamber):
                 entry["districtOffice"] = r["districtOffice"]
             if r.get("capitolOffice"):
                 entry["capitolOffice"] = r["capitolOffice"]
+            if r.get("url"):
+                entry["url"] = r["url"]
             by_district[key] = entry
     for v in by_district.values():
         v.pop("_incumbent", None)
