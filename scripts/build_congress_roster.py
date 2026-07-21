@@ -6,8 +6,9 @@ no key; the whole state is kept because the TIGERweb congressional geometry the
 app joins on is whole-state too (METRO_EXPANSION_PLAYBOOK §9; re-parameterized
 from Chicago's IL builder — "IL"->"NY", 17->26 reps).
 
-Output shape: { "<district>": {"name", "party", "url"} }, keyed by district
-number. REFUSES to write below the count floor.
+Output shape: { "<district>": {"name", "party", "url", "capitolOffice",
+"districtOffice"} }, keyed by district number (offices present when the source
+carries them). REFUSES to write below the count floor.
 
 Usage:
     python3 scripts/build_congress_roster.py
@@ -72,6 +73,17 @@ def district_offices_by_bioguide():
     return out
 
 
+def capitol_office(term):
+    """The Washington, D.C. office the source carries per term — address + phone,
+    as lines the factory renders under capitolLabel; empties dropped."""
+    lines = []
+    if term.get("address"):
+        lines.append(str(term["address"]))
+    if term.get("phone"):
+        lines.append("Phone: " + str(term["phone"]))
+    return lines
+
+
 def main():
     data = json.load(urllib.request.urlopen(SRC, timeout=90))
     offices = district_offices_by_bioguide()
@@ -89,6 +101,9 @@ def main():
             "party": term.get("party"),
             "url": term.get("url") or "https://www.house.gov/representatives",
         }
+        cap = capitol_office(term)
+        if cap:
+            entry["capitolOffice"] = cap
         office = offices.get((p.get("id") or {}).get("bioguide"))
         if office:
             entry["districtOffice"] = office
