@@ -137,7 +137,7 @@ try {
       return {
         boro: boroEl ? boroEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
         jud: judEl ? judEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
-        highlights: document.querySelectorAll("#map .nyc-region-highlight").length,
+        highlights: document.querySelectorAll("#map .region-highlight").length,
       };
     }, POINT2);
     check(

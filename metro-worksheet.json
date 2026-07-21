@@ -16,8 +16,6 @@
     { "id": "sf", "label": "San Francisco", "url": "https://sf.chidistricts.com/", "emoji": "🌉",
       "bbox": { "minLng": -122.6, "minLat": 37.6, "maxLng": -122.3, "maxLat": 37.95 } }
   ],
-  "highlight_class": "nyc-region-highlight",
-  "poi_pin_class": "nyc-poi-pin",
   "hover_number_keys": [
     ["district", "dist_num", "dist", "district_number", "district_no"],
     ["coundist", "schooldist", "precinct", "firebn"],
