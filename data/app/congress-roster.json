@@ -3,6 +3,10 @@
 "name": "Nick LaLota",
 "party": "Republican",
 "url": "https://lalota.house.gov",
+"capitolOffice": [
+"122 Cannon House Office Building Washington DC 20515-3201",
+"Phone: 202-225-3826"
+],
 "districtOffice": [
 "109 King Road",
 "Rocky Point, NY 11778",
@@ -13,6 +17,10 @@
 "name": "Andrew R. Garbarino",
 "party": "Republican",
 "url": "https://garbarino.house.gov",
+"capitolOffice": [
+"2344 Rayburn House Office Building Washington DC 20515-3202",
+"Phone: 202-225-7896"
+],
 "districtOffice": [
 "31 Oak Street Suite 20",
 "Patchogue, NY 11772",
@@ -23,6 +31,10 @@
 "name": "Thomas R. Suozzi",
 "party": "Democrat",
 "url": "https://suozzi.house.gov",
+"capitolOffice": [
+"203 Cannon House Office Building Washington DC 20515-3203",
+"Phone: 202-225-3335"
+],
 "districtOffice": [
 "242-09 Northern Boulevard",
 "Douglaston, NY 11363",
@@ -33,6 +45,10 @@
 "name": "Laura Gillen",
 "party": "Democrat",
 "url": "https://gillen.house.gov",
+"capitolOffice": [
+"428 Cannon House Office Building Washington DC 20515-3204",
+"Phone: 202-225-5516"
+],
 "districtOffice": [
 "229 7th St Suite 102",
 "Garden City, NY 11530",
@@ -43,6 +59,10 @@
 "name": "Gregory W. Meeks",
 "party": "Democrat",
 "url": "https://meeks.house.gov",
+"capitolOffice": [
+"2310 Rayburn House Office Building Washington DC 20515-3205",
+"Phone: 202-225-3461"
+],
 "districtOffice": [
 "67-12 Rockaway Beach Blvd.",
 "Arverne, NY 11692",
@@ -53,6 +73,10 @@
 "name": "Grace Meng",
 "party": "Democrat",
 "url": "https://meng.house.gov",
+"capitolOffice": [
+"2468 Rayburn House Office Building Washington DC 20515-3206",
+"Phone: 202-225-2601"
+],
 "districtOffice": [
 "40-13 159th St. Suite A",
 "Flushing, NY 11358",
@@ -63,6 +87,10 @@
 "name": "Nydia M. Velázquez",
 "party": "Democrat",
 "url": "https://velazquez.house.gov",
+"capitolOffice": [
+"2302 Rayburn House Office Building Washington DC 20515-3207",
+"Phone: 202-225-2361"
+],
 "districtOffice": [
 "266 Broadway Suite 201",
 "Brooklyn, NY 11211",
@@ -73,6 +101,10 @@
 "name": "Hakeem S. Jeffries",
 "party": "Democrat",
 "url": "https://jeffries.house.gov",
+"capitolOffice": [
+"2267 Rayburn House Office Building Washington DC 20515-3208",
+"Phone: 202-225-5936"
+],
 "districtOffice": [
 "445 Neptune Ave Suite 1st Floor, Community Room 2C",
 "Brooklyn, NY 11224",
@@ -83,6 +115,10 @@
 "name": "Yvette D. Clarke",
 "party": "Democrat",
 "url": "https://clarke.house.gov",
+"capitolOffice": [
+"2058 Rayburn House Office Building Washington DC 20515-3209",
+"Phone: 202-225-6231"
+],
 "districtOffice": [
 "222 Lenox Rd. Suites 1 & 2",
 "Brooklyn, NY 11226",
@@ -93,6 +129,10 @@
 "name": "Daniel S. Goldman",
 "party": "Democrat",
 "url": "https://goldman.house.gov",
+"capitolOffice": [
+"245 Cannon House Office Building Washington DC 20515-3210",
+"Phone: 202-225-7944"
+],
 "districtOffice": [
 "290 Broadway Suite 291",
 "New York, NY 10007",
@@ -103,6 +143,10 @@
 "name": "Nicole Malliotakis",
 "party": "Republican",
 "url": "https://malliotakis.house.gov",
+"capitolOffice": [
+"1124 Longworth House Office Building Washington DC 20515-3211",
+"Phone: 202-225-3371"
+],
 "districtOffice": [
 "1698 Victory Blvd Suite 2L",
 "Staten Island, NY 10314",
@@ -113,6 +157,10 @@
 "name": "Jerrold Nadler",
 "party": "Democrat",
 "url": "https://nadler.house.gov",
+"capitolOffice": [
+"2132 Rayburn House Office Building Washington DC 20515-3212",
+"Phone: 202-225-5635"
+],
 "districtOffice": [
 "201 Varick St. Suite 669",
 "New York, NY 10014",
@@ -123,6 +171,10 @@
 "name": "Adriano Espaillat",
 "party": "Democrat",
 "url": "https://espaillat.house.gov",
+"capitolOffice": [
+"2332 Rayburn House Office Building Washington DC 20515-3213",
+"Phone: 202-225-4365"
+],
 "districtOffice": [
 "163 West 125th Street #508",
 "New York, NY 10027",
@@ -133,6 +185,10 @@
 "name": "Alexandria Ocasio-Cortez",
 "party": "Democrat",
 "url": "https://ocasio-cortez.house.gov",
+"capitolOffice": [
+"250 Cannon House Office Building Washington DC 20515-3214",
+"Phone: 202-225-3965"
+],
 "districtOffice": [
 "1231 Lafayette Ave Suite L-610",
 "Bronx, NY 10474"
@@ -142,6 +198,10 @@
 "name": "Ritchie Torres",
 "party": "Democrat",
 "url": "https://ritchietorres.house.gov",
+"capitolOffice": [
+"1414 Longworth House Office Building Washington DC 20515-3215",
+"Phone: 202-225-4361"
+],
 "districtOffice": [
 "540 E Fordham Rd. Suite 2A",
 "Bronx, NY 10458",
@@ -152,6 +212,10 @@
 "name": "George Latimer",
 "party": "Democrat",
 "url": "https://latimer.house.gov",
+"capitolOffice": [
+"1507 Longworth House Office Building Washington DC 20515-3216",
+"Phone: 202-225-2464"
+],
 "districtOffice": [
 "222 Mamaroneck Ave Suite 312",
 "White Plains, NY 10605",
@@ -162,6 +226,10 @@
 "name": "Michael Lawler",
 "party": "Republican",
 "url": "https://lawler.house.gov",
+"capitolOffice": [
+"324 Cannon House Office Building Washington DC 20515-3217",
+"Phone: 202-225-6506"
+],
 "districtOffice": [
 "60 McAlpin Ave",
 "Mahopac, NY 10541",
@@ -172,6 +240,10 @@
 "name": "Patrick Ryan",
 "party": "Democrat",
 "url": "https://patryan.house.gov",
+"capitolOffice": [
+"1708 Longworth House Office Building Washington DC 20515-3218",
+"Phone: 202-225-5614"
+],
 "districtOffice": [
 "307 Wall Street #6",
 "Kingston, NY 12401",
@@ -182,6 +254,10 @@
 "name": "Josh Riley",
 "party": "Democrat",
 "url": "https://riley.house.gov",
+"capitolOffice": [
+"128 Cannon House Office Building Washington DC 20515-3219",
+"Phone: 202-225-5441"
+],
 "districtOffice": [
 "49 Court St Suite 210",
 "Binghamton, NY 13901",
@@ -192,6 +268,10 @@
 "name": "Paul Tonko",
 "party": "Democrat",
 "url": "https://tonko.house.gov",
+"capitolOffice": [
+"2269 Rayburn House Office Building Washington DC 20515-3220",
+"Phone: 202-225-5076"
+],
 "districtOffice": [
 "19 Dove Street Suite 302",
 "Albany, NY 12210",
@@ -202,6 +282,10 @@
 "name": "Elise M. Stefanik",
 "party": "Republican",
 "url": "https://stefanik.house.gov",
+"capitolOffice": [
+"2211 Rayburn House Office Building Washington DC 20515-3221",
+"Phone: 202-225-4611"
+],
 "districtOffice": [
 "137 Margaret Street Suite 100",
 "Plattsburgh, NY 12901",
@@ -212,6 +296,10 @@
 "name": "John W. Mannion",
 "party": "Democrat",
 "url": "https://mannion.house.gov",
+"capitolOffice": [
+"1516 Longworth House Office Building Washington DC 20515-3222",
+"Phone: 202-225-3701"
+],
 "districtOffice": [
 "440 South Warren St Suite 706",
 "Syracuse, NY 13202",
@@ -222,6 +310,10 @@
 "name": "Nicholas A. Langworthy",
 "party": "Republican",
 "url": "https://langworthy.house.gov",
+"capitolOffice": [
+"422 Cannon House Office Building Washington DC 20515-3223",
+"Phone: 202-225-3161"
+],
 "districtOffice": [
 "8201 Main Street Suite 13",
 "Williamsville, NY 14221",
@@ -232,6 +324,10 @@
 "name": "Claudia Tenney",
 "party": "Republican",
 "url": "https://tenney.house.gov",
+"capitolOffice": [
+"2230 Rayburn House Office Building Washington DC 20515-3224",
+"Phone: 202-225-3665"
+],
 "districtOffice": [
 "46 E Bridge Street Suite 102",
 "Oswego, NY 13126",
@@ -242,6 +338,10 @@
 "name": "Joseph D. Morelle",
 "party": "Democrat",
 "url": "https://morelle.house.gov",
+"capitolOffice": [
+"570 Cannon House Office Building Washington DC 20515-3225",
+"Phone: 202-225-3615"
+],
 "districtOffice": [
 "255 East Ave. Suite 150",
 "Rochester, NY 14604",
@@ -252,6 +352,10 @@
 "name": "Timothy M. Kennedy",
 "party": "Democrat",
 "url": "https://kennedy.house.gov",
+"capitolOffice": [
+"423 Cannon House Office Building Washington DC 20515-3226",
+"Phone: 202-225-3306"
+],
 "districtOffice": [
 "726 Exchange Street Suite 601",
 "Buffalo, NY 14210",

@@ -5786,7 +5786,8 @@ function initNycExplorer() {
     loadDistricts: loadCongressDistricts,
     districtFields: ["cd119", "cd118", "cd", "cdfp"],
     loadRoster: function () { return loadCongressRoster(); },
-    memberLabel: "U.S. Representative",
+    memberLabel: "U.S. Representative", capitolLabel: "D.C. Office",
+    districtPrefix: "NY-",
     directoryUrl: "https://www.house.gov/representatives",
     profileLabel: "Representative's website", directoryLabel: "House directory",
     style: { color: "#1D3557", weight: 2, fillColor: "#457B9D", fillOpacity: 0.05, dashArray: "8 3" }
