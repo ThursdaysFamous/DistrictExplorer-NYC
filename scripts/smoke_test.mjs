@@ -123,7 +123,10 @@ try {
     check(`borough classifies City Hall (${EXPECT_DISTRICT["borough"]})`, !boro.error && new RegExp(EXPECT_DISTRICT["borough"]).test(boro.text) && /New York/.test(boro.text), boro.text.slice(0, 70));
 
     const jud = await cardText(page, "judicial-district");
-    check(`judicial-district classifies City Hall (District ${EXPECT_DISTRICT["judicial-district"]})`, !jud.error && new RegExp("Judicial District\\s*" + EXPECT_DISTRICT["judicial-district"] + "\\b").test(jud.text), jud.text.slice(0, 70));
+    // pill-aware since the fork's card pass: the identifier lives in the header
+    // pill ("District 1"), which cardText prepends — the body no longer
+    // repeats it (Handoff 3 §5b).
+    check(`judicial-district classifies City Hall (District ${EXPECT_DISTRICT["judicial-district"]})`, !jud.error && new RegExp("District\\s*" + EXPECT_DISTRICT["judicial-district"] + "\\b").test(jud.text), jud.text.slice(0, 70));
 
     const muni = await cardText(page, "municipal-court");
     check(`municipal-court classifies City Hall (${EXPECT_DISTRICT["borough"]} District ${EXPECT_DISTRICT["municipal-court"]})`, !muni.error && new RegExp(EXPECT_DISTRICT["borough"] + " Municipal Court District " + EXPECT_DISTRICT["municipal-court"] + "\\b").test(muni.text), muni.text.slice(0, 80));
@@ -136,20 +139,23 @@ try {
       window.NycExplorer.setSelectedPoint(lat, lng);
       const boroEl = document.getElementById("card-borough");
       const judEl = document.getElementById("card-judicial-district");
+      // the district identifier lives in the header pill since the card
+      // pass (Handoff 3 §5b) — read the whole block (header + body)
+      const judBlock = judEl ? judEl.closest(".layer-block") : null;
       for (let i = 0; i < 100; i++) {
-        if (boroEl && /Brooklyn/.test(boroEl.innerText) && judEl && /Judicial District\s*2\b/.test(judEl.innerText)) break;
+        if (boroEl && /Brooklyn/.test(boroEl.innerText) && judBlock && /District\s*2\b/.test(judBlock.innerText)) break;
         await new Promise((r) => setTimeout(r, 100));
       }
       return {
         boro: boroEl ? boroEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
-        jud: judEl ? judEl.innerText.replace(/\s+/g, " ").trim() : "(none)",
+        jud: judBlock ? judBlock.innerText.replace(/\s+/g, " ").trim() : "(none)",
         highlights: document.querySelectorAll("#map .region-highlight").length,
       };
     }, POINT2);
     check(
       "point move re-classifies (Manhattan/1 -> Brooklyn/2) and re-highlights",
-      /Brooklyn/.test(moved.boro) && /Judicial District\s*2\b/.test(moved.jud) && moved.highlights >= 1,
-      `boro=${moved.boro.slice(0, 30)} | jud=${moved.jud.slice(0, 30)} | highlights=${moved.highlights}`
+      /Brooklyn/.test(moved.boro) && /District\s*2\b/.test(moved.jud) && moved.highlights >= 1,
+      `boro=${moved.boro.slice(0, 30)} | jud=${moved.jud.slice(0, 60)} | highlights=${moved.highlights}`
     );
     await context.close();
   }
@@ -190,10 +196,12 @@ try {
     const res = await page.evaluate(() => {
       const b = document.getElementById("card-borough");
       const j = document.getElementById("card-judicial-district");
+      // pill-aware (Handoff 3 §5b): the identifier is in the block header pill
+      const jBlock = j ? j.closest(".layer-block") : null;
       return {
         errored: !!b && b.classList.contains("state-error"),
         hasRetry: !!b && !!b.querySelector(".retry-btn"),
-        otherOk: !!j && !j.classList.contains("state-error") && /Judicial District\s*1\b/.test(j.innerText),
+        otherOk: !!j && !j.classList.contains("state-error") && !!jBlock && /District\s*1\b/.test(jBlock.innerText),
       };
     });
     check("failed layer shows error card + Retry", res.errored && res.hasRetry);

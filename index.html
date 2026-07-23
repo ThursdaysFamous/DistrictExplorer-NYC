@@ -1863,6 +1863,32 @@ svg.leaflet-image-layer.leaflet-interactive path {
     .card-details-hint-word { display: none; }
   }
   /* ==== ENGINE:END styles-card-v2 ==== */
+  /* ---- School Location card (Handoff 3 §8a/8b): type chips + typed rows.
+     On-state chip colors are set inline from the type palette; this is the
+     off/base state — dashed grey outline, struck label, count kept. ---- */
+  .school-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--card-row-border); }
+  .school-chip {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    color: var(--card-hint); background: #fff;
+    border: 1px dashed #d1d5db; border-radius: 99px;
+    padding: 4px 11px; cursor: pointer;
+  }
+  .school-chip.is-on { border-style: solid; }
+  .school-chip:not(.is-on) .school-chip-label { text-decoration: line-through; }
+  .school-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; flex: none; }
+  .school-chip-count { font-weight: 500; opacity: 0.85; }
+  .school-suffix { font-weight: 600; color: var(--card-muted); font-size: 13px; }
+  .school-footrow { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--card-border); }
+  .school-footnote { font-size: 11.5px; color: var(--card-hint); line-height: 1.45; flex: 1; }
+  .school-show-all {
+    font-size: 12px; font-weight: 600;
+    color: var(--card-link); background: #fff;
+    border: 1px solid var(--card-btn-border); border-radius: 99px;
+    padding: 4px 11px; cursor: pointer; white-space: nowrap;
+  }
+  .school-list-empty { padding: 12px 18px; margin: 0; color: var(--slate); }
+
   /* ==== ENGINE:BEGIN styles-footer ==== */
   /* ---- Footer: a dark bookend echoing the masthead ---- */
   footer.site-footer {
@@ -5562,6 +5588,7 @@ function initNycExplorer() {
     label: "Neighborhood (NTA)",
     loader: loadNeighborhoods,
     style: { color: "#2E7D5B", weight: 2, fillColor: "#2E7D5B", fillOpacity: 0.06 },
+    compact: true, compactMetaField: "code", // 4b name-only card, NTA code as meta
     fields: [
       { name: "name", label: "Neighborhood", keys: ["ntaname"], primary: true },
       { name: "code", label: "NTA code", keys: ["nta2020"] },
@@ -5579,8 +5606,11 @@ function initNycExplorer() {
     label: "ZIP Code (MODZCTA)",
     loader: makeCachedLoader("pri4-ifjk"),
     style: { color: "#4E6E9C", weight: 2, fillColor: "#4E6E9C", fillOpacity: 0.05, dashArray: "1 3" },
+    pill: true, // ZIP identifier in the header pill (Handoff 3 §5b, "60564" style)
     fields: [
-      { name: "zip", label: "ZIP (MODZCTA)", keys: ["modzcta"], primary: true },
+      // label shortened so the pill reads "ZIP 10001"; the MODZCTA nuance
+      // stays in the layer name and the ZIP-codes list row below
+      { name: "zip", label: "ZIP", keys: ["modzcta"], primary: true },
       { name: "label", label: "ZIP codes", keys: ["label"] },
       { name: "pop", label: "Est. population", keys: ["pop_est"] }
     ]
@@ -5683,8 +5713,11 @@ function initNycExplorer() {
     label: "NY Supreme Court Judicial District",
     loader: loadJudicialDistricts,
     style: { color: "#6B4E8C", weight: 2, fillColor: "#6B4E8C", fillOpacity: 0.05, dashArray: "7 3" },
+    pill: true, // district identifier in the header pill (Handoff 3 §5b)
     fields: [
-      { name: "district", label: "Judicial District", keys: ["district"], primary: true },
+      // label shortened so the pill reads "District 1" (the layer name above
+      // already says Judicial District)
+      { name: "district", label: "District", keys: ["district"], primary: true },
       { name: "borough", label: "Borough / County", keys: ["borough"] },
       { label: "How it's elected", value: "Justices are elected countywide to 14-year terms." }
     ],
@@ -6286,8 +6319,11 @@ function initNycExplorer() {
     id: "school-district", group: "schools", label: "Community School District",
     loader: loadSchoolDistricts,
     style: { color: "#0B7285", weight: 2, fillColor: "#0B7285", fillOpacity: 0.05 },
+    pill: true, // district identifier in the header pill (Handoff 3 §5b)
     fields: [
-      { name: "district", label: "Community School District", keys: ["schooldist"], primary: true },
+      // label shortened so the pill reads "District 15" (the layer name above
+      // already says Community School District)
+      { name: "district", label: "District", keys: ["schooldist"], primary: true },
       { label: "Superintendent", value: "Appointed by the Chancellor (not elected)." }
     ],
     primaryLink: function () {
@@ -6376,16 +6412,262 @@ function initNycExplorer() {
         return { type: "FeatureCollection", features: feats };
       });
   });
-  registerNearestPointLayer({
-    id: "school-site", group: "schools", label: "School",
-    color: "#2E7D5B", fill: "#7CC49B",
-    loader: loadSchoolSites,
-    intro: "Nearest schools (public, charter, private), straight-line distance:",
-    line: function (p) {
-      var name = findPropCI(p, ["legal_name"]);
-      var type = findPropCI(p, ["school_type"]);
-      var addr = findPropCI(p, ["physaddrline1"]);
-      return (name ? toTitleCase(name) : "School") + (type ? " [" + type + "]" : "") + (addr ? " — " + toTitleCase(addr) : "");
+  /* School Location card rebuilt per Handoff 3 §8a/8b (Chicago's chips card is
+   * the reference implementation): type filter chips (Public/Charter/Private —
+   * the NYSED registry's own taxonomy, carried as the school_type tag the
+   * loader stamps), typed rows via renderNearestRows, display-only header
+   * suffix, and a footer that swaps to the hiding notice + Show all while
+   * filtered. Names/addresses arrive ALL-CAPS from NYSED — cardTitleCase
+   * normalizes them ("PS" stays caps via its keep-caps set). */
+  var NYC_SCHOOL_SITE_COUNT = 3;
+  var NYC_SCHOOL_CATS = ["Public", "Charter", "Private"];
+  var NYC_SCHOOL_CAT_META = {
+    Public:  { full: "Public",  color: "#2E7D5B" }, // the layer's own green
+    Charter: { full: "Charter", color: "#A15C00" },
+    Private: { full: "Private", color: "#6A3FA0" }
+  };
+  // filter selection persists across point selections AND page loads
+  // (sessionStorage — §8b "persist chip state per session"); a storage
+  // failure (private mode) degrades to in-memory only.
+  var NYC_SCHOOL_FILTER_KEY = "nyc-school-type-filter";
+  function loadSchoolTypeFilter() {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(NYC_SCHOOL_FILTER_KEY));
+      if (saved && typeof saved === "object") {
+        return { Public: saved.Public !== false, Charter: saved.Charter !== false, Private: saved.Private !== false };
+      }
+    } catch (e) { /* fall through to defaults */ }
+    return { Public: true, Charter: true, Private: true };
+  }
+  function saveSchoolTypeFilter() {
+    try { sessionStorage.setItem(NYC_SCHOOL_FILTER_KEY, JSON.stringify(schoolTypeFilter)); } catch (e) { /* display pref only */ }
+  }
+  var schoolTypeFilter = loadSchoolTypeFilter();
+  function schoolSiteCategory(props) {
+    // the loader stamps school_type = Public|Private|Charter per NYSED layer
+    var t = findPropCI(props || {}, ["school_type"]);
+    return NYC_SCHOOL_CAT_META[t] ? String(t) : "Public";
+  }
+
+  registerLayer({
+    id: "school-site", group: "schools",
+    label: "School (nearest " + NYC_SCHOOL_SITE_COUNT + ")",
+    color: "#2E7D5B", // legend/accent color (matches overlay.style below)
+    overlay: {
+      load: loadSchoolSites,
+      // flat base kept for moduleColor()/baseStyleFor; the per-feature styler
+      // paints each dot by type and hides filtered-off types. Explicit
+      // fillOpacity everywhere — dots must not inherit the polygon-oriented
+      // scaled fill.
+      style: { color: "#2E7D5B", weight: 1.5, fillColor: "#7CC49B", fillOpacity: 0.85 },
+      styleForFeature: function (feature) {
+        var cat = schoolSiteCategory(feature.properties);
+        if (!schoolTypeFilter[cat]) return { opacity: 0, fillOpacity: 0 };
+        var color = NYC_SCHOOL_CAT_META[cat].color;
+        return { color: color, fillColor: color, opacity: 1, fillOpacity: 0.85 };
+      },
+      pointToLayer: function (feature, latlng) {
+        var cat = schoolSiteCategory(feature.properties);
+        var meta = NYC_SCHOOL_CAT_META[cat];
+        var off = !schoolTypeFilter[cat];
+        var marker = L.circleMarker(latlng, {
+          radius: 5, weight: 1.5,
+          color: meta.color, fillColor: meta.color,
+          opacity: off ? 0 : 1, fillOpacity: off ? 0 : 0.85
+        });
+        // hover identity for the dots — same pattern as the nearest-point
+        // factory: the shared dark hover snapshot, gated to hover-capable
+        // devices; identity mirrors the card row (name + type + address).
+        if (hoverCapable) {
+          var token = null;
+          marker
+            .on("mouseover", function () {
+              var props = feature.properties || {};
+              var name = findPropCI(props, ["legal_name"]);
+              var addr = findPropCI(props, ["physaddrline1"]);
+              token = {
+                modId: "school-site",
+                label: (name ? cardTitleCase(String(name)) : "School") + " — " + meta.full,
+                address: addr ? cardTitleCase(String(addr)) : "",
+                latlng: latlng,
+                color: meta.color,
+                layerLabel: "School (nearest " + NYC_SCHOOL_SITE_COUNT + ")"
+              };
+              hoveredPoi = token;
+              updateHover();
+            })
+            .on("mouseout", function () {
+              if (hoveredPoi === token) {
+                hoveredPoi = null;
+                updateHover();
+              }
+            });
+        }
+        return marker;
+      }
+    },
+    query: function (point, seq) {
+      return loadSchoolSites().then(function (geojson) {
+        var features = (geojson && geojson.features) || [];
+        var clean = function (v) { var s = v == null ? "" : String(v).trim(); return s ? s : null; };
+        var withDistance = [];
+        for (var i = 0; i < features.length; i++) {
+          var latLng = pointFeatureLatLng(features[i]);
+          if (!latLng) continue;
+          var props = features[i].properties || {};
+          withDistance.push({
+            name: clean(findPropCI(props, ["legal_name"])),
+            category: schoolSiteCategory(props),
+            address: clean(findPropCI(props, ["physaddrline1"])),
+            distanceMi: haversineMiles(point.lat, point.lng, latLng.lat, latLng.lng)
+          });
+        }
+        if (!withDistance.length) return null;
+        withDistance.sort(function (a, b) { return a.distanceMi - b.distanceMi; });
+        // full sorted set (not just nearest 3) so the type chips re-slice
+        // the list client-side without re-querying
+        return { seq: seq, schools: withDistance };
+      });
+    },
+    render: function (result) {
+      var wrap = document.createElement("div");
+      wrap.className = "card-flush";
+
+      var counts = { Public: 0, Charter: 0, Private: 0 };
+      result.schools.forEach(function (s) { counts[s.category]++; });
+
+      // ---- type chips (§8a/8b) — pure toggles driving the list, the map
+      // dots, the header suffix, and the footer notice ----
+      var chipsWrap = document.createElement("div");
+      chipsWrap.className = "school-chips";
+      var chipEls = {};
+      NYC_SCHOOL_CATS.forEach(function (cat) {
+        var meta = NYC_SCHOOL_CAT_META[cat];
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "school-chip";
+        chip.setAttribute("aria-pressed", "false");
+        var dot = document.createElement("span");
+        dot.className = "school-chip-dot";
+        var txt = document.createElement("span");
+        txt.className = "school-chip-label";
+        txt.textContent = meta.full;
+        var count = document.createElement("span");
+        count.className = "school-chip-count";
+        count.textContent = String(counts[cat]);
+        chip.appendChild(dot);
+        chip.appendChild(txt);
+        chip.appendChild(count);
+        chip.addEventListener("click", function () {
+          schoolTypeFilter[cat] = !schoolTypeFilter[cat];
+          saveSchoolTypeFilter();
+          renderList();
+          var mod = getLayerById("school-site");
+          if (mod) restyleOverlayFeatures(mod); // repaint/hide dots to match
+        });
+        chipEls[cat] = { chip: chip, dot: dot };
+        chipsWrap.appendChild(chip);
+      });
+      wrap.appendChild(chipsWrap);
+
+      var rowsWrap = document.createElement("div");
+      rowsWrap.className = "school-nearest";
+      wrap.appendChild(rowsWrap);
+
+      // footer strip: the source footnote by default; the hiding notice +
+      // "Show all" reset while any type is toggled off
+      var footRow = document.createElement("div");
+      footRow.className = "school-footrow";
+      var footNote = document.createElement("div");
+      footNote.className = "school-footnote";
+      footRow.appendChild(footNote);
+      var showAll = document.createElement("button");
+      showAll.type = "button";
+      showAll.className = "school-show-all";
+      showAll.textContent = "Show all";
+      showAll.hidden = true;
+      showAll.addEventListener("click", function () {
+        NYC_SCHOOL_CATS.forEach(function (cat) { schoolTypeFilter[cat] = true; });
+        saveSchoolTypeFilter();
+        renderList();
+        var mod = getLayerById("school-site");
+        if (mod) restyleOverlayFeatures(mod);
+      });
+      footRow.appendChild(showAll);
+      wrap.appendChild(footRow);
+
+      // header suffix — display-only: the block label reads "School (all,
+      // incl. private · nearest 3)" or "(2 of 3 types · nearest 3)";
+      // mod.label (worksheet-canonical string) is untouched.
+      function updateHeaderSuffix(onCount) {
+        var labelEl = document.querySelector('label[for="toggle-school-site"]');
+        if (!labelEl) return;
+        var suffixText = (onCount === NYC_SCHOOL_CATS.length
+          ? "(all, incl. private · nearest " + NYC_SCHOOL_SITE_COUNT + ")"
+          : "(" + onCount + " of " + NYC_SCHOOL_CATS.length + " types · nearest " + NYC_SCHOOL_SITE_COUNT + ")");
+        labelEl.textContent = "School ";
+        var suffix = document.createElement("span");
+        suffix.className = "school-suffix";
+        suffix.textContent = suffixText;
+        labelEl.appendChild(suffix);
+      }
+
+      function renderList() {
+        rowsWrap.innerHTML = "";
+        var onCats = NYC_SCHOOL_CATS.filter(function (cat) { return schoolTypeFilter[cat]; });
+        NYC_SCHOOL_CATS.forEach(function (cat) {
+          var on = !!schoolTypeFilter[cat];
+          var meta = NYC_SCHOOL_CAT_META[cat];
+          var els = chipEls[cat];
+          els.chip.className = "school-chip" + (on ? " is-on" : "");
+          els.chip.setAttribute("aria-pressed", on ? "true" : "false");
+          if (on) {
+            els.chip.style.color = "color-mix(in srgb, " + meta.color + " 55%, #1f2937)";
+            els.chip.style.background = "color-mix(in srgb, " + meta.color + " 12%, transparent)";
+            els.chip.style.borderColor = "color-mix(in srgb, " + meta.color + " 35%, transparent)";
+            els.dot.style.background = meta.color;
+          } else {
+            els.chip.style.color = "";
+            els.chip.style.background = "";
+            els.chip.style.borderColor = "";
+            els.dot.style.background = "";
+          }
+        });
+        updateHeaderSuffix(onCats.length);
+        var shown = result.schools.filter(function (s) { return schoolTypeFilter[s.category]; }).slice(0, NYC_SCHOOL_SITE_COUNT);
+        if (!shown.length) {
+          var empty = document.createElement("p");
+          empty.className = "school-list-empty";
+          empty.textContent = "No schools of the selected type(s) nearby.";
+          rowsWrap.appendChild(empty);
+        } else {
+          rowsWrap.appendChild(renderNearestRows(shown.map(function (s) {
+            var meta = NYC_SCHOOL_CAT_META[s.category];
+            return {
+              name: s.name ? cardTitleCase(String(s.name)) : "School",
+              tag: { text: meta.full, color: meta.color },
+              note: s.address ? cardTitleCase(String(s.address)) : null,
+              dotColor: meta.color,
+              accentColor: meta.color,
+              distanceLabel: s.distanceMi.toFixed(2) + " mi"
+            };
+          })));
+        }
+        var hiddenCount = NYC_SCHOOL_CATS.reduce(function (sum, cat) {
+          return schoolTypeFilter[cat] ? sum : sum + counts[cat];
+        }, 0);
+        if (hiddenCount > 0) {
+          var offNames = NYC_SCHOOL_CATS.filter(function (cat) { return !schoolTypeFilter[cat]; })
+            .map(function (cat) { return NYC_SCHOOL_CAT_META[cat].full; });
+          footNote.textContent = "Hiding " + hiddenCount + " school" + (hiddenCount === 1 ? "" : "s") + " (" + offNames.join(", ") + ").";
+          showAll.hidden = false;
+        } else {
+          footNote.textContent = "Straight-line distance. Type from the NYSED school registry (public / charter / private).";
+          showAll.hidden = true;
+        }
+      }
+      renderList();
+      return wrap;
     }
   });
 
