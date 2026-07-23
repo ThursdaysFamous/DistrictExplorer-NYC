@@ -75,7 +75,8 @@ async function cardText(page, id) {
       (cid) => {
         const el = document.getElementById("card-" + cid);
         return el && !el.querySelector(".loading-row") &&
-          (el.querySelector(".result-fields") || el.querySelector(".state-empty") ||
+          (el.querySelector(".result-fields") || el.querySelector(".card-flush") ||
+           el.querySelector(".state-empty") ||
            el.classList.contains("state-empty") || el.classList.contains("state-error") || el.querySelector(".state-error"));
       },
       id,
@@ -85,8 +86,13 @@ async function cardText(page, id) {
   return page.evaluate((cid) => {
     const el = document.getElementById("card-" + cid);
     if (!el) return { text: "(no card)", error: true, empty: false };
+    // redesigned cards (engine-v1.0.10) carry the district identifier in the
+    // header pill, outside the card body — read the card the way a user does
+    const block = el.closest(".layer-block");
+    const pill = block && block.querySelector(".card-id-pill:not([hidden])");
+    const text = (pill ? pill.textContent + " " : "") + el.innerText;
     return {
-      text: el.innerText.replace(/\s+/g, " ").trim(),
+      text: text.replace(/\s+/g, " ").trim(),
       error: el.classList.contains("state-error") || !!el.querySelector(".state-error"),
       empty: el.classList.contains("state-empty") || !!el.querySelector(".state-empty"),
     };
