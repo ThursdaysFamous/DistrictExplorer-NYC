@@ -5565,21 +5565,32 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
-      // Card convention: identifier → officer → location → contact → link.
-      var fields = [{ label: "Borough", value: result.borough != null ? String(result.borough) : "Unknown" }];
-      if (result.county != null) fields.push({ label: "County", value: String(result.county) });
-      if (result.countyfips != null) fields.push({ label: "County FIPS", value: String(result.countyfips) });
+      // card-helpers vocabulary (engine-v1.0.10): borough identity as the
+      // intro, the appointed clerk as a badged person row, the office
+      // behind the expander (docs/CARD_RENDER_API.md in the reference fork).
+      var wrap = cardEl("div", "card-flush");
+      var noteBits = [];
+      if (result.county != null) noteBits.push(String(result.county) + " County");
+      if (result.countyfips != null) noteBits.push("FIPS " + String(result.countyfips));
+      wrap.appendChild(renderBodyIntro({
+        title: result.borough != null ? String(result.borough) : "Unknown",
+        note: noteBits.length ? noteBits.join(" · ") : null
+      }));
       var clerk = result.clerk;
-      if (clerk) {
-        if (clerk.name) fields.push({ label: "County Clerk", value: String(clerk.name) + " — appointed" });
-        if (clerk.address) fields.push({ label: "Clerk's Office", value: String(clerk.address), pin: "#8C6A2E" });
-        if (clerk.phone) fields.push({ label: "Phone", value: String(clerk.phone) });
-        var page = safeHttpUrl(clerk.url);
-        if (page) {
-          fields.push({ label: "Clerk info", html: '<a href="' + sanitize(page) + '" target="_blank" rel="noopener">County Clerk\u2019s Office (NY Courts)</a>' });
-        }
+      if (clerk && clerk.name) {
+        // appointed, not elected — the badge note keeps the card honest
+        var person = { name: String(clerk.name), badge: "County Clerk", note: "appointed" };
+        if (clerk.phone) person.phone = String(clerk.phone);
+        wrap.appendChild(renderPersonRows([person]));
       }
-      return renderFieldList(fields);
+      if (clerk && clerk.address) {
+        wrap.appendChild(renderOfficeGroup({ offices: [{ label: "Clerk's Office", lines: [String(clerk.address)] }] }));
+      }
+      return wrap;
+    },
+    primaryLink: function (result) {
+      var page = result.clerk ? safeHttpUrl(result.clerk.url) : null;
+      return page ? { label: "County Clerk’s Office (NY Courts)", url: page } : null;
     },
     pointOfInterest: function (result) {
       if (!result.clerk || !result.clerk.address) return null;
@@ -5605,9 +5616,11 @@ function initNycExplorer() {
     fields: [
       { name: "district", label: "Judicial District", keys: ["district"], primary: true },
       { name: "borough", label: "Borough / County", keys: ["borough"] },
-      { label: "How it's elected", value: "Justices are elected countywide to 14-year terms." },
-      { label: "Court", html: '<a href="https://www.nycourts.gov/courts/" target="_blank" rel="noopener">NY State Supreme Court (Civil Term)</a>' }
-    ]
+      { label: "How it's elected", value: "Justices are elected countywide to 14-year terms." }
+    ],
+    primaryLink: function () {
+      return { label: "NY State Supreme Court (Civil Term)", url: "https://www.nycourts.gov/courts/" };
+    }
   });
 
   /* ---------- Civil (Municipal) Court District (offline anchor) ----------
@@ -5626,9 +5639,11 @@ function initNycExplorer() {
     fields: [
       { name: "label", label: "District", keys: ["label"], primary: true },
       { name: "borough", label: "Borough", keys: ["boro_name"] },
-      { label: "How it's elected", value: "Civil Court judges are elected by district." },
-      { label: "Directory", html: '<a href="https://www.nycourts.gov/courts/nyc/civil/" target="_blank" rel="noopener">NYC Civil Court directory</a>' }
-    ]
+      { label: "How it's elected", value: "Civil Court judges are elected by district." }
+    ],
+    primaryLink: function () {
+      return { label: "NYC Civil Court directory", url: "https://www.nycourts.gov/courts/nyc/civil/" };
+    }
   });
 
 
@@ -5848,24 +5863,36 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
-      // Card convention: identifier → representative → location → contact → link.
-      var fields = [{ label: "Precinct", value: result.precinct != null ? String(result.precinct) : "Unknown" }];
-      if (result.commander) fields.push({ label: "Commanding Officer", value: String(result.commander) });
-      if (result.stationAddress) {
-        var stn = (result.stationName ? toTitleCase(result.stationName) + " — " : "") + toTitleCase(result.stationAddress);
-        fields.push({ label: "Station house", value: stn, pin: "#C8102E" });
+      // 4a-shaped card: commander person row, the station house as an
+      // office block, CCRB as the oversight link row, precinct page in the
+      // footer (primaryLink), precinct number in the header pill.
+      var wrap = cardEl("div", "card-flush");
+      if (result.commander) {
+        wrap.appendChild(renderPersonRows([{ name: String(result.commander), badge: "Commanding Officer" }]));
       }
-      if (result.phone) fields.push({ label: "Phone", value: String(result.phone) });
-      if (result.precinct != null) {
-        // Prefer the roster's scraped source_url (the exact page the commander
-        // name came from); reconstruct from the precinct number only when the
-        // roster row is absent.
-        var url = safeHttpUrl(result.sourceUrl) ||
-          ("https://www.nyc.gov/site/nypd/bureaus/patrol/precincts/" + ordinalSuffix(result.precinct) + "-precinct.page");
-        fields.push({ label: "Precinct page", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYPD ' + ordinalSuffix(result.precinct) + ' Precinct</a>' });
+      if (result.stationAddress || result.phone) {
+        var stationLines = [];
+        if (result.stationAddress) {
+          stationLines.push((result.stationName ? toTitleCase(result.stationName) + " — " : "") + toTitleCase(result.stationAddress));
+        }
+        wrap.appendChild(renderOfficeGroup({
+          offices: [{ label: "Station house", lines: stationLines, phone: result.phone ? String(result.phone) : null }]
+        }));
       }
-      fields.push({ label: "Civilian oversight", html: '<a href="https://www.nyc.gov/site/ccrb/index.page" target="_blank" rel="noopener">CCRB</a> — appointed, citywide' });
-      return renderFieldList(fields);
+      wrap.appendChild(renderLinkRow({
+        note: "Civilian oversight — appointed, citywide",
+        links: [{ label: "CCRB", url: "https://www.nyc.gov/site/ccrb/index.page" }]
+      }));
+      return wrap;
+    },
+    cardIdentifier: function (result) {
+      return result.precinct != null ? "Precinct " + String(result.precinct) : null;
+    },
+    primaryLink: function (result) {
+      if (result.precinct == null) return null;
+      var url = safeHttpUrl(result.sourceUrl) ||
+        ("https://www.nyc.gov/site/nypd/bureaus/patrol/precincts/" + ordinalSuffix(result.precinct) + "-precinct.page");
+      return { label: "NYPD " + ordinalSuffix(result.precinct) + " Precinct", url: url };
     },
     pointOfInterest: function (result) {
       if (!result.stationAddress) return null;
@@ -5911,11 +5938,17 @@ function initNycExplorer() {
         return { seq: seq, sector: findPropCI(p, ["sector"]), pct: findPropCI(p, ["pct"]), patrolBoro: findPropCI(p, ["patrol_bor"]) };
       });
     },
-    render: function (result) {
-      var fields = [{ label: "Sector", value: result.sector ? String(result.sector) : "Unknown" }];
-      if (result.pct) fields.push({ label: "Precinct", value: String(result.pct) });
-      if (result.patrolBoro) fields.push({ label: "Patrol Borough", value: PATROL_BOROUGH[result.patrolBoro] || String(result.patrolBoro) });
-      return renderFieldList(fields);
+    // 4b compact: sector in the header, precinct + patrol borough as the
+    // meta line; no render() — the engine skips it for compact layers
+    compact: true,
+    cardIdentifier: function (result) {
+      return result.sector ? "Sector " + String(result.sector) : "Unknown";
+    },
+    cardMeta: function (result) {
+      var bits = [];
+      if (result.pct) bits.push("Precinct " + String(result.pct));
+      if (result.patrolBoro) bits.push(PATROL_BOROUGH[result.patrolBoro] || String(result.patrolBoro));
+      return bits.length ? bits.join(" · ") : null;
     },
     onToggle: function (on) {
       var precinctRt = layerRuntime["police-precinct"];
@@ -5944,6 +5977,15 @@ function initNycExplorer() {
       var addr = findPropCI(p, ["address"]);
       var pct = findPropCI(p, ["policeprct"]);
       return (name ? toTitleCase(name) : "Police station") + (pct ? " (Precinct " + pct + ")" : "") + (addr ? " — " + toTitleCase(addr) : "");
+    },
+    item: function (p) { // 4d two-line row: name over address
+      var name = findPropCI(p, ["facname"]);
+      var addr = findPropCI(p, ["address"]);
+      var pct = findPropCI(p, ["policeprct"]);
+      return {
+        name: (name ? toTitleCase(name) : "Police station") + (pct ? " (Precinct " + pct + ")" : ""),
+        note: addr ? toTitleCase(addr) : undefined
+      };
     }
   });
 
@@ -5961,6 +6003,13 @@ function initNycExplorer() {
       var addr = findPropCI(p, ["facilityaddress"]);
       var boro = findPropCI(p, ["borough"]);
       return (name ? String(name) : "Firehouse") + (addr ? " — " + toTitleCase(addr) : "") + (boro ? ", " + toTitleCase(boro) : "");
+    },
+    item: function (p) { // 4d two-line row: name over address
+      var name = findPropCI(p, ["facilityname"]);
+      var addr = findPropCI(p, ["facilityaddress"]);
+      var boro = findPropCI(p, ["borough"]);
+      var note = (addr ? toTitleCase(addr) : "") + (boro ? (addr ? ", " : "") + toTitleCase(boro) : "");
+      return { name: name ? String(name) : "Firehouse", note: note || undefined };
     }
   });
 
@@ -6013,6 +6062,14 @@ function initNycExplorer() {
       var city = findPropCI(p, ["city"]);
       var zip = findPropCI(p, ["zipcode", "zip"]);
       return (name ? String(name) : "Post office") + (addr ? " — " + String(addr) : "") + (city ? ", " + String(city) : "") + (zip ? " " + String(zip) : "");
+    },
+    item: function (p) { // 4d two-line row: name over address
+      var name = findPropCI(p, ["name"]);
+      var addr = findPropCI(p, ["address"]);
+      var city = findPropCI(p, ["city"]);
+      var zip = findPropCI(p, ["zipcode", "zip"]);
+      var note = (addr ? String(addr) : "") + (city ? (addr ? ", " : "") + String(city) : "") + (zip ? " " + String(zip) : "");
+      return { name: name ? String(name) : "Post office", note: note || undefined };
     }
   });
 
@@ -6036,6 +6093,19 @@ function initNycExplorer() {
       var zip = findPropCI(p, ["zip"]);
       var addr = (housenum && street) ? String(housenum) + " " + String(street) : (street ? String(street) : "");
       return (name ? String(name) : "Library") + (system ? " (" + String(system) + ")" : "") + (addr ? " — " + addr : "") + (zip ? ", " + String(zip) : "");
+    },
+    item: function (p) { // 4d two-line row: branch (system) over address
+      var name = findPropCI(p, ["name"]);
+      var system = findPropCI(p, ["system"]);
+      var housenum = findPropCI(p, ["housenum"]);
+      var street = findPropCI(p, ["streetname"]);
+      var zip = findPropCI(p, ["zip"]);
+      var addr = (housenum && street) ? String(housenum) + " " + String(street) : (street ? String(street) : "");
+      var note = addr + (zip ? (addr ? ", " : "") + String(zip) : "");
+      return {
+        name: (name ? String(name) : "Library") + (system ? " (" + String(system) + ")" : ""),
+        note: note || undefined
+      };
     }
   });
 
@@ -6066,6 +6136,14 @@ function initNycExplorer() {
       var city = findPropCI(p, ["user_city", "city"]);
       var zip = findPropCI(p, ["user_zipcode", "zipcode", "zip"]);
       return (name ? String(name) : "Early-voting site") + (addr ? " — " + String(addr) : "") + (city ? ", " + String(city) : "") + (zip ? " " + String(zip) : "");
+    },
+    item: function (p) { // 4d two-line row: site over address
+      var name = findPropCI(p, ["user_poll_site_name", "name"]);
+      var addr = findPropCI(p, ["user_poll_site_address", "address"]);
+      var city = findPropCI(p, ["user_city", "city"]);
+      var zip = findPropCI(p, ["user_zipcode", "zipcode", "zip"]);
+      var note = (addr ? String(addr) : "") + (city ? (addr ? ", " : "") + String(city) : "") + (zip ? " " + String(zip) : "");
+      return { name: name ? String(name) : "Early-voting site", note: note || undefined };
     }
   });
 
@@ -6094,29 +6172,29 @@ function initNycExplorer() {
     // Address/Grades rows and its address map pin stay dormant here by design.
     // If a future edition adds them, wire the keys and the pin lights up.
     opts.requireId = true;
-    opts.profileHtml = schoolProfileHtml;
+    opts.profileLink = schoolProfileLink;
     registerSchoolZone(opts);
   }
 
-  var MYSCHOOLS_LINK = '<a href="https://www.myschools.nyc/" target="_blank" rel="noopener">MySchools</a>';
+  var MYSCHOOLS_MORE = { label: "MySchools", url: "https://www.myschools.nyc/" };
 
   registerNycZone({
     id: "es-zone", label: "Elementary School Zone", datasetId: "cmjf-yawu",
     style: { color: "#2E7D5B", weight: 1.5, fillColor: "#7CC49B", fillOpacity: 0.12 },
     emptyNote: "No zoned elementary school found for this point.",
-    moreHtml: MYSCHOOLS_LINK
+    moreLink: MYSCHOOLS_MORE
   });
   registerNycZone({
     id: "ms-zone", label: "Middle School Zone", datasetId: "t26j-jbq7",
     style: { color: "#1F6F5C", weight: 1.5, fillColor: "#5FB49C", fillOpacity: 0.12, dashArray: "5 3" },
     emptyNote: "No zoned middle school here — much of NYC middle-school admission is choice-based.",
-    moreHtml: MYSCHOOLS_LINK
+    moreLink: MYSCHOOLS_MORE
   });
   registerNycZone({
     id: "hs-zone", label: "High School Zone", datasetId: "ruu9-egea",
     style: { color: "#155C4B", weight: 1.5, fillColor: "#4CA98F", fillOpacity: 0.12, dashArray: "2 4" },
     emptyNote: "Most NYC high schools admit by application citywide, not by zone.",
-    moreHtml: MYSCHOOLS_LINK
+    moreLink: MYSCHOOLS_MORE
   });
 
   /* ---------- Community School District (32) — Socrata 8ugf-3d8u ----------
@@ -6140,9 +6218,11 @@ function initNycExplorer() {
     style: { color: "#0B7285", weight: 2, fillColor: "#0B7285", fillOpacity: 0.05 },
     fields: [
       { name: "district", label: "Community School District", keys: ["schooldist"], primary: true },
-      { label: "Superintendent", value: "Appointed by the Chancellor (not elected)." },
-      { label: "Directory", html: '<a href="https://www.schools.nyc.gov/about-us/leadership/superintendents" target="_blank" rel="noopener">DOE superintendents</a>' }
-    ]
+      { label: "Superintendent", value: "Appointed by the Chancellor (not elected)." }
+    ],
+    primaryLink: function () {
+      return { label: "DOE superintendents", url: "https://www.schools.nyc.gov/about-us/leadership/superintendents" };
+    }
   });
 
   /* ---------- Community Education Council (CEC) — parent-elected ----------
@@ -6172,13 +6252,24 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
-      var fields = [{ label: "Council", value: result.district != null ? ("CEC " + result.district) : "Unknown" }];
-      fields.push({ label: "What it is", value: "The parent-elected council for this community school district — NYC's elected parent body (not a school board; the city has mayoral control)." });
-      var names = (result.members || []).filter(function (m) { return m && m.name; }).map(function (m) { return String(m.name); });
-      if (names.length) fields.push({ label: "Members", value: names.join(", ") });
-      fields.push({ label: "Council page", html: '<a href="https://www.schools.nyc.gov/get-involved/families/education-councils/community-education-councils/cec" target="_blank" rel="noopener">Community Education Councils</a>' });
-      return renderFieldList(fields);
-    }
+      // parent-elected members as person rows; the honesty note stays the
+      // intro — this card never calls itself a school board
+      var wrap = cardEl("div", "card-flush");
+      wrap.appendChild(renderBodyIntro({
+        title: "Community Education Council",
+        note: "The parent-elected council for this community school district — NYC's elected parent body (not a school board; the city has mayoral control)."
+      }));
+      var people = (result.members || []).filter(function (m) { return m && m.name; })
+        .map(function (m) { return { name: String(m.name) }; });
+      if (people.length) wrap.appendChild(renderPersonRows(people));
+      return wrap;
+    },
+    cardIdentifier: function (result) {
+      return result.district != null ? "CEC " + String(result.district) : null;
+    },
+    primaryLink: function () {
+      return { label: "Community Education Councils", url: "https://www.schools.nyc.gov/get-involved/families/education-councils/community-education-councils/cec" };
+    },
   });
 
   /* ---------- School (nearest 3; public / charter / private) — NYSED ArcGIS ----------
@@ -6272,15 +6363,34 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
-      var fields = [{ label: "Council District", value: result.district != null ? String(result.district) : "Unknown" }];
+      // council member as a badged person row (party badge when the roster
+      // carries it), district office behind the expander, council page in
+      // the footer, district number in the pill
+      var wrap = cardEl("div", "card-flush");
+      wrap.appendChild(renderBodyIntro({ title: "New York City Council" }));
       if (result.member) {
-        fields.push({ label: "Council Member", value: String(result.member.name) });
-        if (result.member.party) fields.push({ label: "Party", value: String(result.member.party) });
-        if (result.member.office) fields.push({ label: "District Office", value: String(result.member.office), pin: "#7048E8" });
+        wrap.appendChild(renderPersonRows([{
+          name: String(result.member.name),
+          badge: result.member.party ? String(result.member.party) : "Council Member"
+        }]));
+        if (result.member.office) {
+          wrap.appendChild(renderOfficeGroup({
+            offices: [{ label: "District Office", lines: [String(result.member.office)] }]
+          }));
+        }
       }
-      var url = result.district != null ? ("https://council.nyc.gov/district-" + result.district + "/") : "https://council.nyc.gov/districts/";
-      fields.push({ label: result.member ? "Council page" : "Council directory", html: '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">NYC Council' + (result.district != null ? " District " + result.district : "") + '</a>' });
-      return renderFieldList(fields);
+      return wrap;
+    },
+    cardIdentifier: function (result) {
+      return result.district != null ? "District " + String(result.district) : null;
+    },
+    primaryLink: function (result) {
+      // label follows the actual href — the directory fallback must not
+      // masquerade as the member's district page
+      if (result.district != null) {
+        return { label: "NYC Council District " + result.district, url: "https://council.nyc.gov/district-" + result.district + "/" };
+      }
+      return { label: "NYC Council directory", url: "https://council.nyc.gov/districts/" };
     },
     pointOfInterest: function (result) {
       if (!result.member || !result.member.office) return null;
@@ -6352,21 +6462,41 @@ function initNycExplorer() {
       });
     },
     render: function (result) {
-      var fields = [{ label: "Community District", value: (result.boro ? result.boro + " " : "") + "CD " + result.cd }];
+      // chair + district manager as badged person rows, the board office
+      // behind the expander, board contact as a link row; the appointed
+      // note stays — the board itself is not elected
+      var wrap = cardEl("div", "card-flush");
       var i = result.info;
+      wrap.appendChild(renderBodyIntro({
+        title: "Community Board",
+        note: i && i.neighborhoods ? String(i.neighborhoods) : null
+      }));
       if (i) {
-        if (i.cb_chair) fields.push({ label: "Board Chair", value: String(i.cb_chair) });
-        if (i.cb_district_manager) fields.push({ label: "District Manager", value: String(i.cb_district_manager) });
-        if (i.neighborhoods) fields.push({ label: "Neighborhoods", value: String(i.neighborhoods) });
+        var people = [];
+        if (i.cb_chair) people.push({ name: String(i.cb_chair), badge: "Board Chair", note: "appointed" });
+        if (i.cb_district_manager) people.push({ name: String(i.cb_district_manager), badge: "District Manager" });
+        if (people.length) wrap.appendChild(renderPersonRows(people));
         var addr = cbOfficeAddress(i);
-        if (addr) fields.push({ label: "Board Office", value: addr, pin: "#F72585" });
-        if (i.cb_office_phone) fields.push({ label: "Office Phone", value: String(i.cb_office_phone) });
-        if (i.cb_office_email) fields.push({ label: "Email", html: '<a href="mailto:' + sanitize(i.cb_office_email) + '">' + sanitize(i.cb_office_email) + '</a>' });
+        if (addr || i.cb_office_phone) {
+          wrap.appendChild(renderOfficeGroup({
+            offices: [{ label: "Board Office", lines: addr ? [addr] : [], phone: i.cb_office_phone ? String(i.cb_office_phone) : null }]
+          }));
+        }
         var web = i.cb_website && i.cb_website.url ? safeHttpUrl(i.cb_website.url) : null;
-        if (web) fields.push({ label: "Website", html: '<a href="' + sanitize(web) + '" target="_blank" rel="noopener">' + sanitize(web) + '</a>' });
+        if (i.cb_office_email || web) {
+          wrap.appendChild(renderLinkRow({
+            email: i.cb_office_email ? String(i.cb_office_email) : null,
+            links: web ? [{ label: "Website", url: web }] : []
+          }));
+        }
       }
-      fields.push({ label: "Note", value: "Board members are appointed by the Borough President and Council members (the board itself is not elected)." });
-      return renderFieldList(fields);
+      wrap.appendChild(renderBodyIntro({
+        note: "Board members are appointed by the Borough President and Council members (the board itself is not elected)."
+      }));
+      return wrap;
+    },
+    cardIdentifier: function (result) {
+      return (result.boro ? result.boro + " " : "") + "CD " + result.cd;
     },
     pointOfInterest: function (result) {
       var addr = result.info ? cbOfficeAddress(result.info) : null;
@@ -6491,11 +6621,16 @@ function initNycExplorer() {
         return { seq: seq, ad: s.ad, ed: s.ed };
       });
     },
-    render: function (result) {
-      return renderFieldList([
-        { label: "Election District", value: "ED " + result.ed + " (AD " + result.ad + ")" },
-        { label: "What it is", value: "The ballot-counting unit, nested within State Assembly District " + result.ad + "." }
-      ]);
+    // 4b compact: the ballot-counting unit — ED in the header, its parent
+    // Assembly District as the meta line; the "what it is" context moved to
+    // the layer's identity being self-evident from the nesting under
+    // State Assembly District. No render() — the engine skips it.
+    compact: true,
+    cardIdentifier: function (result) {
+      return "ED " + String(result.ed);
+    },
+    cardMeta: function (result) {
+      return "AD " + String(result.ad);
     },
     onToggle: function (on) {
       var parentRt = layerRuntime["state-assembly"];
@@ -6551,16 +6686,31 @@ function initNycExplorer() {
         });
       },
       render: function (result) {
-        var fields = [{ label: "Borough", value: result.boro ? String(result.boro) : "Unknown" }];
-        if (opts.role === "da" && result.county) fields.push({ label: "County", value: String(result.county) + " County" });
-        if (result.person) fields.push({ label: opts.label, value: String(result.person.name) });
+        // officeholder as a badged person row; borough identity in the
+        // header pill; the link follows the actual href (a Green Book
+        // fallback must not masquerade as the officeholder's own site)
+        var wrap = cardEl("div", "card-flush");
+        var noteBits = [];
+        if (opts.role === "da" && result.county) noteBits.push(String(result.county) + " County");
+        if (noteBits.length || !result.person) {
+          wrap.appendChild(renderBodyIntro({
+            title: result.boro ? String(result.boro) : "Unknown",
+            note: noteBits.length ? noteBits.join(" · ") : null
+          }));
+        }
+        if (result.person) {
+          wrap.appendChild(renderPersonRows([{ name: String(result.person.name), badge: opts.label }]));
+        }
+        return wrap;
+      },
+      cardIdentifier: function (result) {
+        return result.boro ? String(result.boro) : null;
+      },
+      primaryLink: function (result) {
         var url = (result.person && result.person.url) ? safeHttpUrl(result.person.url) : null;
-        fields.push({
-          label: result.person ? (opts.label + " website") : "Official directory",
-          html: '<a href="' + sanitize(url || GREEN_BOOK_URL) + '" target="_blank" rel="noopener">' + (url ? sanitize(url) : "NYC Green Book") + '</a>'
-        });
-        return renderFieldList(fields);
-      }
+        if (url) return { label: opts.label + " website", url: url };
+        return { label: "NYC Green Book", url: GREEN_BOOK_URL };
+      },
     });
   }
   registerBoroughOfficeLayer({
@@ -6633,10 +6783,11 @@ function initNycExplorer() {
   // NYC school-profile link, built from a DBN (e.g. "20K503") — MySchools is the
   // DOE's own directory (§2: this URL builder is the city-specific part of the
   // school-zone factory). Verified live: /en/schools/<dbn>/ returns 200.
-  function schoolProfileHtml(dbn) {
+  function schoolProfileLink(dbn) {
+    // profile URLs are only ever built from a dataset-supplied DBN, never
+    // guessed from a name (school-zone-factory contract)
     if (!dbn) return null;
-    var url = "https://www.myschools.nyc/en/schools/" + encodeURIComponent(String(dbn)) + "/";
-    return '<a href="' + sanitize(url) + '" target="_blank" rel="noopener">MySchools profile</a>';
+    return { label: "MySchools profile", url: "https://www.myschools.nyc/en/schools/" + encodeURIComponent(String(dbn)) + "/" };
   }
 
   /* ==== ENGINE:BEGIN school-zone-factory ==== */
